@@ -6,11 +6,11 @@ If any error occurs it is automatically notified using bugsnag, You can set LOGS
 
 Create object of class by requiring 'logger' module<br/>
 Example:<br/>
-      logger = new logger({<br/>
-          [fileName: <custom filename>,]<br/>
-          [isWebview = <boolean value stating whether its a webview logs>,]<br/>
-          [domain = <title or info stating its presence>]<br/>
-      });<br/>
+________logger = new logger({<br/>
+________[fileName: <custom filename>,]<br/>
+__________[isWebview = <boolean value stating whether its a webview logs>,]<br/>
+__________[domain = <title or info stating its presence>]<br/>
+________});<br/>
       logger.<level>(<message>);<br/>
       logger.uploadLogs()[or pruneOldLogs()].then(result=>console.log(result));<br/>
 Note :<br/>
