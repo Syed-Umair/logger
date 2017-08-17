@@ -1,0 +1,22 @@
+{
+    "name": "logger",
+    "version": "1.0.0",
+    "description": "Logger For Electron Apps",
+    "main": "Logger.js",
+    "scripts": {
+        /*scripts*/
+    },
+    "keywords": [
+        "Logger",
+        "electron"
+    ],
+    "author": "Syed Umair",
+    "license": "ISC",
+    "dependencies": {
+        "bugsnag": "^1.12.0",
+        "form-data": "^2.2.0",
+        "graceful-fs": "^4.1.11",
+        "jszip": "^3.1.3",
+        "winston": "^2.3.1"
+    }
+}
