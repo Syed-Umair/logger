@@ -56,7 +56,7 @@ const CUSTOMLEVELS = {
  * @param  {string}
  * @return {object}
  */
-function getConfig(type, pid, isWebview, domain, fileName) {
+function getConfig(type, pid, isWebview, domain = 'webview', fileName) {
   let filename = null;
   let config = {
     prettyPrint: true,
