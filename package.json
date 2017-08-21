@@ -2,7 +2,7 @@
   "name": "logger-electron",
   "version": "0.0.2",
   "description": "Logger For Electron Apps",
-  "main": "Logger.js",
+  "main": "logger.js",
   "scripts": {},
   "keywords": ["Logger", "electron"],
   "author": {
