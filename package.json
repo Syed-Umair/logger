@@ -1,12 +1,12 @@
 {
-  "name": "logger",
-  "version": "1.0.0",
+  "name": "logger-electron",
+  "version": "0.0.2",
   "description": "Logger For Electron Apps",
   "main": "Logger.js",
   "scripts": {},
   "keywords": ["Logger", "electron"],
   "author": {
-    "name": "Syed Umair",
+    "name": "syed_umair",
     "email": "dev@sydumair.com",
     "url": "sydumair.com"
   },
