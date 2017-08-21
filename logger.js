@@ -56,7 +56,7 @@ const CUSTOMLEVELS = {
  * @param  {string}
  * @return {object}
  */
-function getConfig(type, pid, isWebview, domain = 'webview', fileName) {
+function getConfig(type, pid, isWebview, domain = "webview", fileName) {
   let filename = null;
   let config = {
     prettyPrint: true,
@@ -64,7 +64,7 @@ function getConfig(type, pid, isWebview, domain = 'webview', fileName) {
     json: false,
     colorize: true,
     filename: null,
-    timestamp: function () {
+    timestamp: function() {
       let now = new Date();
       return `${now.toLocaleString("en-US", {
         day: "2-digit",
@@ -76,7 +76,7 @@ function getConfig(type, pid, isWebview, domain = 'webview', fileName) {
         hour12: false
       })}.${now.getMilliseconds()}`;
     },
-    formatter: function (options) {
+    formatter: function(options) {
       return `${options.timestamp()}::${options.level}::${options.message}`;
     }
   };
@@ -213,7 +213,7 @@ async function uploadLogs() {
     let form = new formData();
     let zipPath = await getRecentLogs();
     form.append("fileToUpload", fs.createReadStream(zipPath));
-    form.submit("http://localhost/test/upload.php", function (error, result) {
+    form.submit("http://localhost/test/upload.php", function(error, result) {
       if (error) throw error;
     });
     await unlinkPromise(zipPath);
@@ -242,10 +242,7 @@ class Logger {
       transports: [
         new winston.transports.File(
           getConfig(type, pid, isWebview, domain, fileName)
-        ),
-        new winston.transports.Console({
-          colorize: true
-        })
+        )
       ]
     });
     winston.addColors(CUSTOMLEVELS.colors);
