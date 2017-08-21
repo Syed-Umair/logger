@@ -245,6 +245,7 @@ class Logger {
         )
       ]
     });
+    this.on = this.logger.on;
     winston.addColors(CUSTOMLEVELS.colors);
   }
   debug(...content) {

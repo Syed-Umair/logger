@@ -1,6 +1,6 @@
 {
   "name": "logger-electron",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Logger For Electron Apps",
   "main": "logger.js",
   "scripts": {},
