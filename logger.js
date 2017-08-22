@@ -5,6 +5,9 @@
  * If any error occurs it is automatically notified using bugsnag,
  * You can set LOGS_EXPIRY = no. of days to get the corresponding logs
  * Create object of class by requiring 'logger' module
+ * Also we support bugsnag here so you can register your bugsnag by uncommenting 
+ * bugsnag.register(yourtoken)
+ * by default notify is added to the error method.
  * Example:
  *     logger = new logger({
  *         [fileName: <custom filename>,]
@@ -28,7 +31,7 @@ let readdirPromise = promisify(fs.readdir);
 let statPromise = promisify(fs.stat);
 let readFilePromise = promisify(fs.readFile);
 let unlinkPromise = promisify(fs.unlink);
-bugsnag.register("a5970117dde9ed516d0f31ceb49b0928");
+//bugsnag.register('add bugsnag token here');
 const LOGS_EXPIRY = 7;
 const LOGSDIR = path.join(
   getAppDataLoc(),
@@ -242,10 +245,10 @@ class Logger {
       transports: [
         new winston.transports.File(
           getConfig(type, pid, isWebview, domain, fileName)
-        )
+        ),
+        new winston.transports.Console({ colorize: true })
       ]
     });
-    this.on = this.logger.on;
     winston.addColors(CUSTOMLEVELS.colors);
   }
   debug(...content) {
@@ -263,7 +266,7 @@ class Logger {
   error(...content) {
     let data = getMessage(content);
     this.logger.error(data);
-    bugsnag.notify(new Error(data));
+    // bugsnag.notify(new Error(data));
   }
   uploadLogs() {
     return uploadLogs();
