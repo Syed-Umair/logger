@@ -239,7 +239,7 @@ class Logger {
       fs.mkdirSync(LOGSDIR);
     }
     pruneOldLogs();
-    this.logger = new winston.Logger({
+    this.logAPI = new winston.Logger({
       level: "error",
       levels: CUSTOMLEVELS.levels,
       transports: [
@@ -252,20 +252,20 @@ class Logger {
     winston.addColors(CUSTOMLEVELS.colors);
   }
   debug(...content) {
-    this.logger.debug(getMessage(content));
+    this.logAPI.debug(getMessage(content));
   }
   log(...content) {
-    this.logger.info(getMessage(content));
+    this.logAPI.info(getMessage(content));
   }
   info(...content) {
-    this.logger.info(getMessage(content));
+    this.logAPI.info(getMessage(content));
   }
   warn(...content) {
-    this.logger.warn(getMessage(content));
+    this.logAPI.warn(getMessage(content));
   }
   error(...content) {
     let data = getMessage(content);
-    this.logger.error(data);
+    this.logAPI.error(data);
     // bugsnag.notify(new Error(data));
   }
   uploadLogs() {
