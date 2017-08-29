@@ -6,7 +6,7 @@
  * You can set LOGS_EXPIRY = no. of days to get the corresponding logs
  * Create object of class by requiring 'logger' module
  * Also we support bugsnag here so you can register your bugsnag by uncommenting 
- * bugsnag.register(yourtoken)
+ * include bugsnagKey : <your API key> in your package.json 
  * by default notify is added to the error method.
  * Example:
  *     logger = new logger({
@@ -32,12 +32,10 @@ let readdirPromise = promisify(fs.readdir);
 let statPromise = promisify(fs.stat);
 let readFilePromise = promisify(fs.readFile);
 let unlinkPromise = promisify(fs.unlink);
-//bugsnag.register('add bugsnag token here');
 const LOGS_EXPIRY = 7;
-const LOGSDIR = path.join(
-  getAppDataLoc(),
-  `${require("../../package.json").name}-logs`
-);
+const APP_NAME = require("../../package.json").name || "electron-app";
+const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
+const bugsnagKey = require("../../package.json").bugsnagKey || null;
 const CUSTOMLEVELS = {
   levels: {
     debug: 0,
@@ -52,6 +50,9 @@ const CUSTOMLEVELS = {
     error: "red"
   }
 };
+if (!util.isNull(bugsnagKey)) {
+  bugsnag.register(bugsnagKey);
+}
 /**
  * Setting up configuration for winston file transport and returns config object
  * @param  {process type}
@@ -212,11 +213,11 @@ async function pruneOldLogs() {
  * Uses FORMDATA to upload log archive to server.
  * @return {promise}
  */
-async function uploadLogs({ link = null, key = null, accessToken = null }) {
+async function uploadLogs({ link = null, zipKey = null, accessToken = null }) {
   try {
     let form = new formData();
     let zipPath = await getRecentLogs();
-    form.append(key, fs.createReadStream(zipPath));
+    form.append(zipKey, fs.createReadStream(zipPath));
     if (!util.isNull(accessToken)) {
       form.append(accessToken.name, accessToken.value);
     }
@@ -272,7 +273,7 @@ class Logger {
   error(...content) {
     let data = getMessage(content);
     this.logAPI.error(data);
-    // bugsnag.notify(new Error(data));
+    bugsnag.notify(new Error(data));
   }
   uploadLogs() {
     return uploadLogs();
