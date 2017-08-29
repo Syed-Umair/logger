@@ -26,6 +26,7 @@ let path = require("path");
 let jsZip = require("jszip");
 let bugsnag = require("bugsnag");
 let formData = require("form-data");
+let got = require("got");
 let promisify = require("./promisify.js");
 let readdirPromise = promisify(fs.readdir);
 let statPromise = promisify(fs.stat);
@@ -211,13 +212,19 @@ async function pruneOldLogs() {
  * Uses FORMDATA to upload log archive to server.
  * @return {promise}
  */
-async function uploadLogs() {
+async function uploadLogs({ link = null, key = null, accessToken = null }) {
   try {
     let form = new formData();
     let zipPath = await getRecentLogs();
-    form.append("fileToUpload", fs.createReadStream(zipPath));
-    form.submit("http://localhost/test/upload.php", function(error, result) {
+    form.append(key, fs.createReadStream(zipPath));
+    if (!util.isNull(accessToken)) {
+      form.append(accessToken.name, accessToken.value);
+    }
+    /* form.submit(link, function(error, result) {
       if (error) throw error;
+    }); */
+    got.post(link, {
+      body: form
     });
     await unlinkPromise(zipPath);
     return `Last ${LOGS_EXPIRY} day(s) Logs Submitted.`;
