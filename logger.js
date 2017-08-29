@@ -252,8 +252,7 @@ class Logger {
       transports: [
         new winston.transports.File(
           getConfig(type, pid, isWebview, domain, fileName)
-        ),
-        new winston.transports.Console({ colorize: true })
+        )
       ]
     });
     winston.addColors(CUSTOMLEVELS.colors);
