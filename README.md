@@ -12,7 +12,7 @@
 
 * Also we support bugsnag here so you can register your bugsnag by uncommenting 
 
-* include bugsnagKey : &lt;yourAPIkey&gt; in your package.json 
+* include bugsnagKey : yourAPIkey in your package.json 
 
 * by default bugsnag.notify is added to the error method.
 
@@ -20,17 +20,17 @@
 
 *     logger = new logger({
 
-*         [fileName: &lt;custom filename&gt;,]
+*         [fileName: custom filename,]
 
-*         [isWebview = &lt;boolean value stating whether its a webview logs&gt;,]
+*         [isWebview = boolean value stating whether its a webview logs,]
 
-*         [domain = &lt;title or info stating its presence&gt;]
+*         [domain = title or info stating its presence]
 
 *     });
 
-*     logger.&lt;level&gt;(&lt;message&gt;);
+*     logger.level(message);
 
-*     logger.pruneOldLogs().then(result=&gt;console.log(result)); 
+*     logger.pruneOldLogs().then(result=>console.log(result)); 
 
 * Note :
 
