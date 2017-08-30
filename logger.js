@@ -7,7 +7,7 @@
  * Create object of class by requiring 'logger' module
  * Also we support bugsnag here so you can register your bugsnag by uncommenting 
  * include bugsnagKey : <your API key> in your package.json 
- * by default notify is added to the error method.
+ * by default bugsnag.notify is added to the error method.
  * Example:
  *     logger = new logger({
  *         [fileName: <custom filename>,]
@@ -15,9 +15,9 @@
  *         [domain = <title or info stating its presence>]
  *     });
  *     logger.<level>(<message>);
- *     logger.uploadLogs()[or pruneOldLogs()].then(result=>console.log(result)); 
+ *     logger.pruneOldLogs().then(result=>console.log(result)); 
  * Note :
- *     uploadLogs() and pruneOldLogs() return promise.
+ *       getLogArchive(), clearLogArchive() and pruneOldLogs() return promise.
  */
 let winston = require("winston");
 let fs = require("graceful-fs");
@@ -25,8 +25,7 @@ let util = require("util");
 let path = require("path");
 let jsZip = require("jszip");
 let bugsnag = require("bugsnag");
-let formData = require("form-data");
-let got = require("got");
+let bugsnagIntegrated = false;
 let promisify = require("./promisify.js");
 let readdirPromise = promisify(fs.readdir);
 let statPromise = promisify(fs.stat);
@@ -52,6 +51,7 @@ const CUSTOMLEVELS = {
 };
 if (!util.isNull(bugsnagKey)) {
   bugsnag.register(bugsnagKey);
+  bugsnagIntegrated = true;
 }
 /**
  * Setting up configuration for winston file transport and returns config object
@@ -209,32 +209,6 @@ async function pruneOldLogs() {
     return e;
   }
 }
-/**
- * Uses FORMDATA to upload log archive to server.
- * @return {promise}
- */
-async function uploadLogs({link = null, zipKey = null, accessToken = null}) {
-  try {
-    let form = new formData();
-    let zipPath = await getRecentLogs();
-    form.append(zipKey, fs.createReadStream(zipPath));
-    if (!util.isNull(accessToken)) {
-      form.append(accessToken.name, accessToken.value);
-    }
-    /* form.submit(link, function(error, result) {
-      if (error) throw error;
-    }); */
-    got.post(link, {
-      body: form
-    });
-    await unlinkPromise(zipPath);
-    return `Last ${LOGS_EXPIRY} day(s) Logs Submitted.`;
-  } catch (e) {
-    console.log(e);
-    return e;
-  }
-}
-
 class Logger {
   constructor({fileName = "", isWebview = false, domain = null, type = process.type, pid = process.pid}) {
     if (!fs.existsSync(LOGSDIR)) {
@@ -267,11 +241,10 @@ class Logger {
   error(...content) {
     let data = getMessage(content);
     this.logAPI.error(data);
-    bugsnag.notify(new Error(data));
+    if (bugsnagIntegrated) {
+      bugsnag.notify(new Error(data));
+    }
   }
-  // uploadLogs() {
-  //   return uploadLogs();
-  // }
   pruneOldLogs() {
     return pruneOldLogs();
   }
