@@ -72,14 +72,14 @@ function getConfig(type, pid, isWebview, domain = "webview", fileName) {
     timestamp: function() {
       let now = new Date();
       return `${now.toLocaleString("en-US", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false
-      })}.${now.getMilliseconds()}`;
+          day: "2-digit",
+          month: "2-digit",
+          year: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false
+        })}.${now.getMilliseconds()}`;
     },
     formatter: function(options) {
       return `${options.timestamp()}::${options.level}::${options.message}`;
@@ -213,7 +213,7 @@ async function pruneOldLogs() {
  * Uses FORMDATA to upload log archive to server.
  * @return {promise}
  */
-async function uploadLogs({ link = null, zipKey = null, accessToken = null }) {
+async function uploadLogs({link = null, zipKey = null, accessToken = null}) {
   try {
     let form = new formData();
     let zipPath = await getRecentLogs();
@@ -236,13 +236,7 @@ async function uploadLogs({ link = null, zipKey = null, accessToken = null }) {
 }
 
 class Logger {
-  constructor({
-    fileName = "",
-    isWebview = false,
-    domain = null,
-    type = process.type,
-    pid = process.pid
-  }) {
+  constructor({fileName = "", isWebview = false, domain = null, type = process.type, pid = process.pid}) {
     if (!fs.existsSync(LOGSDIR)) {
       fs.mkdirSync(LOGSDIR);
     }
@@ -275,11 +269,17 @@ class Logger {
     this.logAPI.error(data);
     bugsnag.notify(new Error(data));
   }
-  uploadLogs() {
-    return uploadLogs();
-  }
+  // uploadLogs() {
+  //   return uploadLogs();
+  // }
   pruneOldLogs() {
     return pruneOldLogs();
+  }
+  getLogArchive() {
+    return getRecentLogs()
+  }
+  clearLogArchive() {
+    return unlinkPromise(path.join(LOGSDIR, "logs.zip"))
   }
 }
 module.exports = Logger;

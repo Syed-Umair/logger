@@ -1,12 +1,15 @@
 {
   "name": "logger-electron",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Logger For Electron Apps",
   "main": "logger.js",
   "scripts": {
     "post-install": "install-app-deps"
   },
-  "keywords": ["Logger", "electron"],
+  "keywords": [
+    "Logger",
+    "electron"
+  ],
   "author": {
     "name": "syed_umair",
     "email": "dev@sydumair.com",
