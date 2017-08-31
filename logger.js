@@ -25,7 +25,6 @@ let util = require("util");
 let path = require("path");
 let jsZip = require("jszip");
 let bugsnag = require("bugsnag");
-let bugsnagIntegrated = false;
 let promisify = require("./promisify.js");
 let readdirPromise = promisify(fs.readdir);
 let statPromise = promisify(fs.stat);
@@ -51,7 +50,6 @@ const CUSTOMLEVELS = {
 };
 if (!util.isNull(bugsnagKey)) {
   bugsnag.register(bugsnagKey);
-  bugsnagIntegrated = true;
 }
 /**
  * Setting up configuration for winston file transport and returns config object
@@ -88,7 +86,7 @@ function getConfig(type, pid, isWebview, domain = "webview", fileName) {
   switch (type) {
     case "renderer":
       if (isWebview) {
-        filename = `${domain}.log`;
+        filename = `${domain}-${pid}.log`;
       } else {
         filename = `renderer-${pid}.log`;
       }
@@ -241,7 +239,7 @@ class Logger {
   error(...content) {
     let data = getMessage(content);
     this.logAPI.error(data);
-    if (bugsnagIntegrated) {
+    if (!util.isNull(bugsnagKey)) {
       bugsnag.notify(new Error(data));
     }
   }
