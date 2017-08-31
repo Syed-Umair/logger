@@ -25,12 +25,15 @@ let util = require("util");
 let path = require("path");
 let jsZip = require("jszip");
 let bugsnag = require("bugsnag");
-let store = require("electron-store");
 let promisify = require("./promisify.js");
 let readdirPromise = promisify(fs.readdir);
 let statPromise = promisify(fs.stat);
 let readFilePromise = promisify(fs.readFile);
 let unlinkPromise = promisify(fs.unlink);
+let store = require("electron-store");
+store = new store({
+  name: "logger"
+});
 const LOGS_EXPIRY = 7;
 const APP_NAME = require("../../package.json").name || "electron-app";
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
@@ -122,9 +125,6 @@ function getAppDataLoc() {
  * creates and persists latest session in electron-store
  */
 function createNewSession() {
-  store = new store({
-    name: "logger"
-  });
   let date = new Date();
   let timestamp = `${date.toLocaleString("en-US", {
     day: "2-digit",
