@@ -165,7 +165,7 @@ function getMessage(content) {
 async function getContents(path) {
   try {
     let contents = await readdirPromise(path);
-    return constents;
+    return contents;
   } catch (e) {
     console.log(e);
     return e;
