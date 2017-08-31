@@ -103,7 +103,7 @@ function getConfig(type, isWebview, domain = "webview", fileName) {
   }
   let sessionFolder = store.get('session');
   if (!fs.existsSync(path.join(LOGSDIR, sessionFolder))) {
-    fs.mkdirSync(LOGSDIR);
+    fs.mkdirSync(path.join(LOGSDIR, sessionFolder));
   }
   config.filename = path.join(LOGSDIR, sessionFolder, filename);
   return config;
