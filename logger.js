@@ -25,6 +25,7 @@ let util = require("util");
 let path = require("path");
 let jsZip = require("jszip");
 let bugsnag = require("bugsnag");
+let store = require("electron-store");
 let promisify = require("./promisify.js");
 let readdirPromise = promisify(fs.readdir);
 let statPromise = promisify(fs.stat);
@@ -54,12 +55,11 @@ if (!util.isNull(bugsnagKey)) {
 /**
  * Setting up configuration for winston file transport and returns config object
  * @param  {process type}
- * @param  {pid Number}
  * @param  {Boolean}
  * @param  {string}
  * @return {object}
  */
-function getConfig(type, pid, isWebview, domain = "webview", fileName) {
+function getConfig(type, isWebview, domain = "webview", fileName) {
   let filename = null;
   let config = {
     prettyPrint: true,
@@ -86,21 +86,26 @@ function getConfig(type, pid, isWebview, domain = "webview", fileName) {
   switch (type) {
     case "renderer":
       if (isWebview) {
-        filename = `${domain}-${pid}.log`;
+        filename = `${domain}.log`;
       } else {
-        filename = `renderer-${pid}.log`;
+        filename = `renderer.log`;
       }
       break;
     case "browser":
-      filename = `main-${pid}.log`;
+      createNewSession();
+      filename = `main.log`;
       break;
     default:
-      filename = `default-${pid}.log`;
+      filename = `default.log`;
   }
   if (fileName) {
     filename = filename.replace(/^/, `${fileName}-`);
   }
-  config.filename = path.join(LOGSDIR, filename);
+  let sessionFolder = store.get('session');
+  if (!fs.existsSync(path.join(LOGSDIR, sessionFolder))) {
+    fs.mkdirSync(LOGSDIR);
+  }
+  config.filename = path.join(LOGSDIR, sessionFolder, filename);
   return config;
 }
 /**
@@ -112,6 +117,27 @@ function getAppDataLoc() {
     process.env.LOCALAPPDATA ||
     path.join(process.env.HOME, "/Library/Application Support")
   );
+}
+/**
+ * creates and persists latest session in electron-store
+ */
+function createNewSession() {
+  store = new store({
+    name: "logger"
+  });
+  let date = new Date();
+  let timestamp = `${date.toLocaleString("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  })}`;
+  timestamp = timestamp.replace(/\/|:/g, "-").replace(/, /g, "_");
+  store.set('session', timestamp);
+
 }
 /**
  * Log expiry time in milliseconds
@@ -136,11 +162,10 @@ function getMessage(content) {
  * Finds all log files in the @LOGSDIR and returns log files array
  * @return {array}
  */
-async function getLogs() {
+async function getContents(path) {
   try {
-    let log_ext = new RegExp(".*.log");
-    let files = await readdirPromise(LOGSDIR);
-    return files.filter(file => log_ext.test(file));
+    let contents = await readdirPromise(path);
+    return constents;
   } catch (e) {
     console.log(e);
     return e;
@@ -167,10 +192,15 @@ async function getLogBirthTime(file) {
 async function getRecentLogs() {
   try {
     let zip = new jsZip();
-    let logs = await getLogs();
-    for (let file of logs) {
-      if ((await getLogBirthTime(file)) >= getLogExpiry())
-        zip.file(file, await readFilePromise(path.join(LOGSDIR, file)));
+    let sessions = await getContents(LOGSDIR);
+    for (let session of sessions) {
+      if ((await getLogBirthTime(session)) >= getLogExpiry()) {
+        let logs = await getContents(path.join(LOGSDIR, session));
+        for (let log of logs) {
+          zip.file(`${session}/${log}`,
+            await readFilePromise(path.join(LOGSDIR, session, log)));
+        }
+      }
     }
     return new Promise(resolve => {
       zip
@@ -195,10 +225,10 @@ async function getRecentLogs() {
  */
 async function pruneOldLogs() {
   try {
-    let logs = await getLogs();
-    for (let file of logs) {
-      if ((await getLogBirthTime(file)) < getLogExpiry()) {
-        await unlinkPromise(path.join(LOGSDIR, file));
+    let sessions = await getContents(LOGSDIR);
+    for (let session of sessions) {
+      if ((await getLogBirthTime(session)) < getLogExpiry()) {
+        await unlinkPromise(path.join(LOGSDIR, session));
       }
     }
     return `Logs older than ${LOGS_EXPIRY} day(s) Cleared`;
@@ -208,7 +238,7 @@ async function pruneOldLogs() {
   }
 }
 class Logger {
-  constructor({fileName = "", isWebview = false, domain = null, type = process.type, pid = process.pid}) {
+  constructor({fileName = "", isWebview = false, domain = null, type = process.type}) {
     if (!fs.existsSync(LOGSDIR)) {
       fs.mkdirSync(LOGSDIR);
     }
@@ -218,7 +248,7 @@ class Logger {
       levels: CUSTOMLEVELS.levels,
       transports: [
         new winston.transports.File(
-          getConfig(type, pid, isWebview, domain, fileName)
+          getConfig(type, isWebview, domain, fileName)
         )
       ]
     });
