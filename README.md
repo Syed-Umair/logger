@@ -10,6 +10,8 @@
 
 * Create object of class by requiring 'logger' module
 
+* Enable and disable logging using enableLogging() and disableLogging()
+
 * Also we support bugsnag here so you can register your bugsnag by uncommenting 
 
 * include bugsnagKey : yourAPIkey in your package.json 

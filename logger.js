@@ -5,6 +5,7 @@
  * If any error occurs it is automatically notified using bugsnag,
  * You can set LOGS_EXPIRY = no. of days to get the corresponding logs
  * Create object of class by requiring 'logger' module
+ * Disable and Enable logging using enableLogging() and disableLogging()
  * Also we support bugsnag here so you can register your bugsnag by uncommenting 
  * include bugsnagKey : <your API key> in your package.json 
  * by default bugsnag.notify is added to the error method.
@@ -34,6 +35,11 @@ let store = require("electron-store");
 store = new store({
   name: "logger"
 });
+try {
+  store.get('fileLogging');
+} catch (e) {
+  store.set('fileLogging', true);
+}
 const LOGS_EXPIRY = 7;
 const APP_NAME = require("../../package.json").name || "electron-app";
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
@@ -65,6 +71,7 @@ if (!util.isNull(bugsnagKey)) {
 function getConfig(type, isWebview, domain = "webview", fileName) {
   let filename = null;
   let config = {
+    name: 'fileTransport',
     prettyPrint: true,
     levels: CUSTOMLEVELS.levels,
     json: false,
@@ -255,20 +262,25 @@ class Logger {
     winston.addColors(CUSTOMLEVELS.colors);
   }
   debug(...content) {
-    this.logAPI.debug(getMessage(content));
+    if (store.get('fileLogging'))
+      this.logAPI.debug(getMessage(content));
   }
   log(...content) {
-    this.logAPI.info(getMessage(content));
+    if (store.get('fileLogging'))
+      this.logAPI.info(getMessage(content));
   }
   info(...content) {
-    this.logAPI.info(getMessage(content));
+    if (store.get('fileLogging'))
+      this.logAPI.info(getMessage(content));
   }
   warn(...content) {
-    this.logAPI.warn(getMessage(content));
+    if (store.get('fileLogging'))
+      this.logAPI.warn(getMessage(content));
   }
   error(...content) {
     let data = getMessage(content);
-    this.logAPI.error(data);
+    if (store.get('fileLogging'))
+      this.logAPI.error(data);
     if (!util.isNull(bugsnagKey)) {
       bugsnag.notify(new Error(data));
     }
@@ -281,6 +293,14 @@ class Logger {
   }
   clearLogArchive() {
     return unlinkPromise(path.join(LOGSDIR, "logs.zip"))
+  }
+  enableLogging() {
+    store.set('fileLogging', true);
+    return "Logging Enabled";
+  }
+  disableLogging() {
+    store.set('fileLogging', false);
+    return "Logging Disabled";
   }
 }
 module.exports = Logger;
