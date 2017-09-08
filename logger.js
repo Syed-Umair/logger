@@ -172,7 +172,9 @@ function getMessage(content) {
 async function getContents(path) {
   try {
     let contents = await readdirPromise(path);
-    return contents;
+    return contents.filter(function(file) {
+      return !((/^\./.test(file)) || (/.zip$/.test(file)))
+    });
   } catch (e) {
     console.log(e);
     return e;
@@ -199,6 +201,7 @@ async function getLogBirthTime(file) {
 async function getRecentLogs() {
   try {
     let zip = new jsZip();
+    let zipName = `logs-${Date.now()}.zip`;
     let sessions = await getContents(LOGSDIR);
     for (let session of sessions) {
       if ((await getLogBirthTime(session)) >= getLogExpiry()) {
@@ -216,9 +219,9 @@ async function getRecentLogs() {
           streamFiles: true,
           compression: "DEFLATE"
         })
-        .pipe(fs.createWriteStream(path.join(LOGSDIR, "logs.zip")))
+        .pipe(fs.createWriteStream(path.join(LOGSDIR, zipName)))
         .on("finish", () => {
-          resolve(path.join(LOGSDIR, "logs.zip"));
+          resolve(path.join(LOGSDIR, zipName));
         });
     });
   } catch (e) {
@@ -230,11 +233,12 @@ async function getRecentLogs() {
  * Deletes logs Older than @LOGS_EXPIRY
  * @return {promise}
  */
-async function pruneOldLogs() {
+async function pruneOldLogs(time = null) {
   try {
     let sessions = await getContents(LOGSDIR);
+    let expiryTime = time || getLogExpiry();
     for (let session of sessions) {
-      if ((await getLogBirthTime(session)) < getLogExpiry()) {
+      if ((await getLogBirthTime(session)) < expiryTime) {
         await unlinkPromise(path.join(LOGSDIR, session));
       }
     }
@@ -259,6 +263,7 @@ class Logger {
         )
       ]
     });
+    this.isWebview = isWebview;
     winston.addColors(CUSTOMLEVELS.colors);
   }
   debug(...content) {
@@ -281,18 +286,18 @@ class Logger {
     let data = getMessage(content);
     if (store.get('fileLogging'))
       this.logAPI.error(data);
-    if (!util.isNull(bugsnagKey)) {
+    if (!util.isNull(bugsnagKey) && !this.isWebview) {
       bugsnag.notify(new Error(data));
     }
   }
-  pruneOldLogs() {
-    return pruneOldLogs();
+  pruneOldLogs(time) {
+    return pruneOldLogs(time);
   }
   getLogArchive() {
     return getRecentLogs()
   }
-  clearLogArchive() {
-    return unlinkPromise(path.join(LOGSDIR, "logs.zip"))
+  clearLogArchive(path) {
+    return unlinkPromise(path);
   }
   enableLogging() {
     store.set('fileLogging', true);
