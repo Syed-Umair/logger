@@ -26,11 +26,6 @@ let util = require("util");
 let path = require("path");
 let jsZip = require("jszip");
 let bugsnag = require("bugsnag");
-// let promisify = require("./promisify.js");
-// let readdirPromise = promisify(fs.readdir);
-// let statPromise = promisify(fs.stat);
-// let readFilePromise = promisify(fs.readFile);
-// let unlinkPromise = promisify(fs.unlink);
 let store = require("electron-store");
 store = new store({
   name: "logger"
