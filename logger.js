@@ -228,12 +228,11 @@ async function getRecentLogs() {
  * Deletes logs Older than @LOGS_EXPIRY
  * @return {promise}
  */
-async function pruneOldLogs(time = null) {
+async function pruneOldLogs() {
   try {
     let sessions = await getContents(LOGSDIR);
-    let expiryTime = time || getLogExpiry();
     for (let session of sessions) {
-      if ((await getLogBirthTime(session)) < expiryTime) {
+      if ((await getLogBirthTime(session)) < getLogExpiry()) {
         await fs.remove(path.join(LOGSDIR, session));
       }
     }
@@ -285,8 +284,8 @@ class Logger {
       bugsnag.notify(new Error(data));
     }
   }
-  pruneOldLogs(time) {
-    return pruneOldLogs(time);
+  pruneOldLogs() {
+    return pruneOldLogs();
   }
   getLogArchive() {
     return getRecentLogs()
