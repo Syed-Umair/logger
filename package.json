@@ -1,6 +1,6 @@
 {
   "name": "logger-electron",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Logger For Electron Apps",
   "main": "logger.js",
   "scripts": {},
@@ -17,7 +17,7 @@
   "dependencies": {
     "bugsnag": "latest",
     "electron-store": "latest",
-    "graceful-fs": "latest",
+    "fs-extra": "latest",
     "jszip": "latest",
     "winston": "latest"
   }

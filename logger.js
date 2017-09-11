@@ -21,16 +21,16 @@
  *       getLogArchive(), clearLogArchive() and pruneOldLogs() return promise.
  */
 let winston = require("winston");
-let fs = require("graceful-fs");
+let fs = require("fs-extra");
 let util = require("util");
 let path = require("path");
 let jsZip = require("jszip");
 let bugsnag = require("bugsnag");
-let promisify = require("./promisify.js");
-let readdirPromise = promisify(fs.readdir);
-let statPromise = promisify(fs.stat);
-let readFilePromise = promisify(fs.readFile);
-let unlinkPromise = promisify(fs.unlink);
+// let promisify = require("./promisify.js");
+// let readdirPromise = promisify(fs.readdir);
+// let statPromise = promisify(fs.stat);
+// let readFilePromise = promisify(fs.readFile);
+// let unlinkPromise = promisify(fs.unlink);
 let store = require("electron-store");
 store = new store({
   name: "logger"
@@ -171,7 +171,7 @@ function getMessage(content) {
  */
 async function getContents(path) {
   try {
-    let contents = await readdirPromise(path);
+    let contents = await fs.readdir(path);
     return contents.filter(function(file) {
       return !((/^\./.test(file)) || (/.zip$/.test(file)))
     });
@@ -187,7 +187,7 @@ async function getContents(path) {
  */
 async function getLogBirthTime(file) {
   try {
-    let stat = await statPromise(path.join(LOGSDIR, file));
+    let stat = await fs.stat(path.join(LOGSDIR, file));
     return stat.birthtime.getTime();
   } catch (e) {
     console.log(e);
@@ -208,7 +208,7 @@ async function getRecentLogs() {
         let logs = await getContents(path.join(LOGSDIR, session));
         for (let log of logs) {
           zip.file(`${session}/${log}`,
-            await readFilePromise(path.join(LOGSDIR, session, log)));
+            await fs.readFile(path.join(LOGSDIR, session, log)));
         }
       }
     }
@@ -239,7 +239,7 @@ async function pruneOldLogs(time = null) {
     let expiryTime = time || getLogExpiry();
     for (let session of sessions) {
       if ((await getLogBirthTime(session)) < expiryTime) {
-        await unlinkPromise(path.join(LOGSDIR, session));
+        await fs.remove(path.join(LOGSDIR, session));
       }
     }
     return `Logs older than ${LOGS_EXPIRY} day(s) Cleared`;
@@ -297,7 +297,7 @@ class Logger {
     return getRecentLogs()
   }
   clearLogArchive(path) {
-    return unlinkPromise(path);
+    return fs.remove(path);
   }
   enableLogging() {
     store.set('fileLogging', true);
