@@ -1,24 +1,8 @@
 /**
  * Logger Module
- * Each logger object is automatically detects the process type 
- * and creates seperate log based on its process type.
- * If any error occurs it is automatically notified using bugsnag,
- * You can set LOGS_EXPIRY = no. of days to get the corresponding logs
- * Create object of class by requiring 'logger' module
- * Disable and Enable logging using enableLogging() and disableLogging()
- * Also we support bugsnag here so you can register your bugsnag by uncommenting 
- * include bugsnagKey : <your API key> in your package.json 
- * by default bugsnag.notify is added to the error method.
- * Example:
- *     logger = new logger({
- *         [fileName: <custom filename>,]
- *         [isWebview = <boolean value stating whether its a webview logs>,]
- *         [domain = <title or info stating its presence>]
- *     });
- *     logger.<level>(<message>);
- *     logger.pruneOldLogs().then(result=>console.log(result)); 
- * Note :
- *       getLogArchive(), clearLogArchive() and pruneOldLogs() return promise.
+ * Each logger object automatically detects the process type, 
+ * creates seperate log based on its process type.
+ * If any error occurs, it is automatically notified using bugsnag.
  */
 let winston = require("winston");
 let fs = require("fs-extra");
@@ -30,15 +14,15 @@ let store = require("electron-store");
 store = new store({
   name: "logger"
 });
-try {
-  store.get('fileLogging');
-} catch (e) {
+
+//Persisting Logging Settings in other required modules
+if (!store.has('fileLogging')) {
   store.set('fileLogging', true);
 }
-const LOGS_EXPIRY = 7;
-const APP_NAME = require("../../package.json").name || "electron-app";
+
+const LOGS_EXPIRY = store.has('LOGS_EXPIRY') ? store.get('LOGS_EXPIRY') : 7;
+const APP_NAME = getAppConfig().name || "electron-app";
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
-const bugsnagKey = require("../../package.json").bugsnagKey || null;
 const CUSTOMLEVELS = {
   levels: {
     debug: 0,
@@ -53,9 +37,7 @@ const CUSTOMLEVELS = {
     error: "red"
   }
 };
-if (!util.isNull(bugsnagKey)) {
-  bugsnag.register(bugsnagKey);
-}
+
 /**
  * Setting up configuration for winston file transport and returns config object
  * @param  {process type}
@@ -72,19 +54,19 @@ function getConfig(type, isWebview, domain = "webview", fileName) {
     json: false,
     colorize: true,
     filename: null,
-    timestamp: function() {
+    timestamp: function () {
       let now = new Date();
       return `${now.toLocaleString("en-US", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false
-        })}.${now.getMilliseconds()}`;
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      })}.${now.getMilliseconds()}`;
     },
-    formatter: function(options) {
+    formatter: function (options) {
       return `${options.timestamp()}::${options.level}::${options.message}`;
     }
   };
@@ -113,6 +95,7 @@ function getConfig(type, isWebview, domain = "webview", fileName) {
   config.filename = path.join(LOGSDIR, sessionFolder, filename);
   return config;
 }
+
 /**
  * appdata location based on platform
  * @return {string}
@@ -123,6 +106,20 @@ function getAppDataLoc() {
     path.join(process.env.HOME, "/Library/Application Support")
   );
 }
+
+/**
+ * returns application name from the parent package.json
+ * @return {string}
+ */
+function getAppConfig() {
+  let parent = require('parent-package-json');
+  if (parent()) {
+    return parent().parse();
+  }
+  else
+    return null;
+}
+
 /**
  * creates and persists latest session in electron-store
  */
@@ -139,8 +136,8 @@ function createNewSession() {
   })}`;
   timestamp = timestamp.replace(/\/|:/g, "-").replace(/, /g, "_");
   store.set('session', timestamp);
-
 }
+
 /**
  * Log expiry time in milliseconds
  * @return {ms}
@@ -148,6 +145,7 @@ function createNewSession() {
 function getLogExpiry() {
   return new Date().getTime() - 24 * 60 * 60 * 1000 * LOGS_EXPIRY;
 }
+
 /**
  * Converts input content to String using util.inspect
  * @param  {array} 
@@ -160,6 +158,7 @@ function getMessage(content) {
   }
   return data;
 }
+
 /**
  * Finds all log files in the @LOGSDIR and returns log files array
  * @return {array}
@@ -167,7 +166,7 @@ function getMessage(content) {
 async function getContents(path) {
   try {
     let contents = await fs.readdir(path);
-    return contents.filter(function(file) {
+    return contents.filter(function (file) {
       return !((/^\./.test(file)) || (/.zip$/.test(file)))
     });
   } catch (e) {
@@ -175,6 +174,7 @@ async function getContents(path) {
     return e;
   }
 }
+
 /**
  * Finds file creation time and returns file creation time in ms
  * @param  {file}
@@ -189,6 +189,7 @@ async function getLogBirthTime(file) {
     return e;
   }
 }
+
 /**
  * Archives recent logs and returns zip path
  * @return {string} 
@@ -224,6 +225,7 @@ async function getRecentLogs() {
     return e;
   }
 }
+
 /**
  * Deletes logs Older than @LOGS_EXPIRY
  * @return {promise}
@@ -242,14 +244,30 @@ async function pruneOldLogs() {
     return e;
   }
 }
+
+function logIt(context, content, level) {
+  if (store.get('fileLogging'))
+    context.logAPI[level](getMessage(content));
+}
+
+function registerBugsnag() {
+  let bugsnagKey = store.get('bugsnagKey', null) || getAppConfig().bugsnagKey || null;
+  if (store && store.has('bugsnagKey')) {
+    bugsnag.register(bugsnagKey, {
+      autoNotify: false
+    });
+  }
+}
+
 class Logger {
-  constructor({fileName = "", isWebview = false, domain = null, type = process.type}) {
+  constructor({ fileName = "", isWebview = false, domain = null, type = process.type }) {
     if (!fs.existsSync(LOGSDIR)) {
       fs.mkdirSync(LOGSDIR);
     }
     pruneOldLogs();
     this.logAPI = new winston.Logger({
       level: "error",
+      exitOnError: false,
       levels: CUSTOMLEVELS.levels,
       transports: [
         new winston.transports.File(
@@ -259,28 +277,23 @@ class Logger {
     });
     this.isWebview = isWebview;
     winston.addColors(CUSTOMLEVELS.colors);
+    registerBugsnag();
   }
   debug(...content) {
-    if (store.get('fileLogging'))
-      this.logAPI.debug(getMessage(content));
+    logIt(this, content, "debug");
   }
   log(...content) {
-    if (store.get('fileLogging'))
-      this.logAPI.info(getMessage(content));
+    logIt(this, content, "info");
   }
   info(...content) {
-    if (store.get('fileLogging'))
-      this.logAPI.info(getMessage(content));
+    logIt(this, content, "info");
   }
   warn(...content) {
-    if (store.get('fileLogging'))
-      this.logAPI.warn(getMessage(content));
+    logIt(this, content, "warn");
   }
   error(...content) {
-    let data = getMessage(content);
-    if (store.get('fileLogging'))
-      this.logAPI.error(data);
-    if (!util.isNull(bugsnagKey) && !this.isWebview) {
+    logIt(this, content, "error");
+    if (!this.isWebview && store && store.has('bugsnagKey')) {
       bugsnag.notify(new Error(data));
     }
   }
@@ -300,6 +313,16 @@ class Logger {
   disableLogging() {
     store.set('fileLogging', false);
     return "Logging Disabled";
+  }
+  addBugsnagKey(apiKey) {
+    store.set('bugsnagKey', apiKey);
+  }
+  removeBugsnagKey() {
+    store.set('bugsnagKey', null);
+  }
+  setLogExpiry(logExpiry) {
+    if (logExpiry < 60)
+      store.set('LOGS_EXPIRY', logExpiry);
   }
 }
 module.exports = Logger;
