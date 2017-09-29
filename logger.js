@@ -22,7 +22,7 @@ if (!store.has('fileLogging')) {
 }
 
 const LOGS_EXPIRY = store.has('LOGS_EXPIRY') ? store.get('LOGS_EXPIRY') : 7;
-const APP_NAME = getAppConfig().name || "electron-app";
+const APP_NAME = getAppName() || "electron-app";
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
 const CUSTOMLEVELS = {
   levels: {
@@ -74,7 +74,7 @@ function getConfig(type, isWebview, domain = "webview", fileName) {
   switch (type) {
     case "renderer":
       if (isWebview) {
-        filename = `${domain}.log`;
+        filename = `${domain}-${Date.now()}.log`;
       } else {
         filename = `renderer.log`;
       }
@@ -109,13 +109,13 @@ function getAppDataLoc() {
 }
 
 /**
- * returns application name from the parent package.json
+ * returns the application name from the parent package.json
  * @return {string}
  */
-function getAppConfig() {
-  let parent = require('parent-package-json');
-  if (parent()) {
-    return parent().parse();
+function getAppName() {
+  let parent = require(`${path.join(require('app-root-dir').get(), 'package.json')}`);
+  if (parent) {
+    return parent.name;
   }
   else
     return null;
@@ -246,22 +246,24 @@ async function pruneOldLogs() {
   }
 }
 
+/**
+ * Logs the content
+ * @param {object} context 
+ * @param {string} content 
+ * @param {string} level 
+ */
 function logIt(context, content, level) {
   if (store.get('fileLogging'))
     context.logAPI[level](getMessage(content));
 }
 
-function registerBugsnag() {
-  let bugsnagKey = store.get('bugsnagKey', null) || getAppConfig().bugsnagKey || null;
-  if (bugsnagKey) {
-    bugsnag.register(bugsnagKey, {
-      autoNotify: false
-    });
-  }
-}
-
 class Logger {
-  constructor({ fileName = "", isWebview = false, domain = null, type = process.type }) {
+  constructor({ fileName = "",
+    bugsnagKey = null,
+    isWebview = false,
+    domain = null,
+    type = process.type
+  }) {
     if (!fs.existsSync(LOGSDIR)) {
       fs.mkdirSync(LOGSDIR);
     }
@@ -277,8 +279,16 @@ class Logger {
       ]
     });
     this.isWebview = isWebview;
+    if (bugsnagKey) {
+      this.bugsnagIntegrated = true;
+      bugsnag.register(bugsnagKey, {
+        autoNotify: false
+      });
+    }
+    else {
+      this.bugsnagIntegrated = false;
+    }
     winston.addColors(CUSTOMLEVELS.colors);
-    registerBugsnag();
   }
   debug(...content) {
     logIt(this, content, "debug");
@@ -294,8 +304,8 @@ class Logger {
   }
   error(...content) {
     logIt(this, content, "error");
-    if (!this.isWebview && store && store.has('bugsnagKey')) {
-      bugsnag.notify(new Error(data));
+    if (!this.isWebview && this.bugsnagIntegrated) {
+      bugsnag.notify(new Error(content));
     }
   }
   pruneOldLogs() {
@@ -314,12 +324,6 @@ class Logger {
   disableLogging() {
     store.set('fileLogging', false);
     return "Logging Disabled";
-  }
-  addBugsnagKey(apiKey) {
-    store.set('bugsnagKey', apiKey);
-  }
-  removeBugsnagKey() {
-    store.set('bugsnagKey', null);
   }
   setLogExpiry(logExpiry) {
     if (logExpiry < 60)
