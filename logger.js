@@ -11,6 +11,7 @@ let path = require("path");
 let jsZip = require("jszip");
 let bugsnag = require("bugsnag");
 let store = require("electron-store");
+
 store = new store({
   name: "logger"
 });
@@ -252,7 +253,7 @@ function logIt(context, content, level) {
 
 function registerBugsnag() {
   let bugsnagKey = store.get('bugsnagKey', null) || getAppConfig().bugsnagKey || null;
-  if (store && store.has('bugsnagKey')) {
+  if (bugsnagKey) {
     bugsnag.register(bugsnagKey, {
       autoNotify: false
     });
