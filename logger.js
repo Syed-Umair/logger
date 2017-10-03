@@ -74,7 +74,7 @@ function getConfig(type, isWebview, domain = "webview", fileName) {
   switch (type) {
     case "renderer":
       if (isWebview) {
-        filename = `${domain}-${Date.now()}.log`;
+        filename = `${domain}.log`;
       } else {
         filename = `renderer.log`;
       }
