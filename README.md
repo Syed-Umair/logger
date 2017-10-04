@@ -108,31 +108,31 @@ logger.clearLogArchive(path);
 
 ##### debug(data to be logged):
 ```sh
-logger.debug("string"/<object>/<any>);
+logger.debug(<string>/<object>/<any>);
 ```
 
 ##### log(data to be logged):
 ```sh
-logger.log("string"/<object>/<any>);
+logger.log(<string>/<object>/<any>);
 ```
 
 ##### info(data to be logged):
 ```sh
-logger.info("string"/<object>/<any>);
+logger.info(<string>/<object>/<any>);
 ```
 
 ##### warn(data to be logged):
 ```sh
-logger.warn("string"/<object>/<any>);
+logger.warn(<string>/<object>/<any>);
 ```
 
 ##### error(data to be logged):
 ```sh
-logger.error("string"/<object>/<any>);
+logger.error(<string>/<object>/<any>);
 //pass directly the error object to get better stack trace results in the bugsnag.
 ```
 
-##### If you want to log the message to console too:
+##### Including the below code, will enable logs to print in dev-tool's console:
 
 ```sh
 logger.logAPI.on("logging", function (transport, level, msg, meta) {

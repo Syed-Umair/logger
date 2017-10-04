@@ -326,7 +326,7 @@ class Logger {
     return "Logging Disabled";
   }
   setLogExpiry(logExpiry) {
-    if (logExpiry <= 60)
+    if (logExpiry > 0 && logExpiry <= 60)
       store.set('LOGS_EXPIRY', logExpiry);
   }
 }
