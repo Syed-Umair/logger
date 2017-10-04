@@ -14,7 +14,7 @@
     "email": "dev@sydumair.com",
     "url": "sydumair.com"
   },
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "bugsnag": "latest",
     "electron-store": "latest",

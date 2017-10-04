@@ -141,4 +141,4 @@ logger.logAPI.on("logging", function (transport, level, msg, meta) {
 License
 ----
 
-ISC
+MIT
