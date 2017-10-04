@@ -13,7 +13,7 @@ logger-electron is a ease to use logger companion for electron applications.
 
 ### Log Files location:
   - %localappdata%/<*appName*>-logs/ for windows
-  - <user>/library/Application Support/<*electron-app*>-logs/ for macos
+  - <user>/library/Application Support/<*appName*>-logs/ for macos
 
 ##### Note: 
 

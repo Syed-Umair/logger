@@ -181,7 +181,7 @@ async function getContents(path) {
  * @param  {file}
  * @return {ms}
  */
-async function getLogBirthTime(file) {
+async function getLogCreationTime(file) {
   try {
     let stat = await fs.stat(path.join(LOGSDIR, file));
     return stat.birthtime.getTime();
@@ -201,7 +201,7 @@ async function getRecentLogs() {
     let zipName = `logs-${Date.now()}.zip`;
     let sessions = await getContents(LOGSDIR);
     for (let session of sessions) {
-      if ((await getLogBirthTime(session)) >= getLogExpiry()) {
+      if ((await getLogCreationTime(session)) >= getLogExpiry()) {
         let logs = await getContents(path.join(LOGSDIR, session));
         for (let log of logs) {
           zip.file(`${session}/${log}`,
@@ -235,7 +235,7 @@ async function pruneOldLogs() {
   try {
     let sessions = await getContents(LOGSDIR);
     for (let session of sessions) {
-      if ((await getLogBirthTime(session)) < getLogExpiry()) {
+      if ((await getLogCreationTime(session)) < getLogExpiry()) {
         await fs.remove(path.join(LOGSDIR, session));
       }
     }
