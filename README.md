@@ -12,8 +12,12 @@ logger-electron is a ease to use logger companion for electron applications.
 ![Sample Log FileNames in some session folder](https://raw.githubusercontent.com/Syed-Umair/logger/master/ScreenShots/sample2.PNG)
 
 ### Log Files location:
-  - %localappdata%/<*electron-app*>-logs/ for windows
+  - %localappdata%/<*appName*>-logs/ for windows
   - <user>/library/Application Support/<*electron-app*>-logs/ for macos
+
+##### Note: 
+
+  The appName is found if the package.json exists in the app root directory contains name parameter. If not found, default value electron-app is assigned that is electron-app-logs folder is used. 
 
 ### Installation
 
