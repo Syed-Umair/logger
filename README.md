@@ -8,6 +8,9 @@ logger-electron is a ease to use logger companion for electron applications.
   - Get logs.zip that can be used to submit feedback
   - Integrated Bugsnag to get notified on errors.
 
+![Sample Log File Location](https://raw.githubusercontent.com/Syed-Umair/logger/master/ScreenShots/sample1.PNG)
+![Sample Log FileNames in some session folder](https://raw.githubusercontent.com/Syed-Umair/logger/master/ScreenShots/sample2.PNG)
+
 ### Log Files location:
   - %localappdata%/<*electron-app*>-logs/ for windows
   - <user>/library/Application Support/<*electron-app*>-logs/ for macos
@@ -31,6 +34,7 @@ logger = new logger({
     isWebview : "<boolean>", //optional default = false
     domain : "<string>" //optional default = null
 });
+// For each instance new log file is created.
 ```
 
 Examples:
