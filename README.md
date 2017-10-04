@@ -63,72 +63,72 @@ logger = new logger({
 
 ### Methods
 
-#####setLogExpiry(logExpiry):
+##### setLogExpiry(logExpiry):
 ```sh
 logger.setLogExpiry(10);
 // Deletes logs older than 10 days
 // Maximum value is 60 days
 ```
 
-#####disableLogging():
+##### disableLogging():
 ```sh
 logger.disableLogging();
 // Disables File Logging
 ```
 
-#####enableLogging():
+##### enableLogging():
 ```sh
 logger.enableLogging();
 // Enables File Logging
 ```
 
-#####pruneOldLogs():
+##### pruneOldLogs():
 ```sh
 logger.pruneOldLogs().then((mesg)=>{console.log(mesg)});
 // Returns promise
 // Manually trigger deletion of logs older than default 7 days or setLogExpiry(logExpiry) days
 ```
 
-#####getLogArchive():
+##### getLogArchive():
 ```sh
 logger.getLogArchive().then((path)=>{console.log(path)});
 // Returns promise
 // On resolve, gives you the path of the logs.zip file.
 ```
 
-#####clearLogArchive(path):
+##### clearLogArchive(path):
 ```sh
 logger.clearLogArchive(path);
 // Prunes log archive path passed
 ```
 
-#####debug(data to be logged):
+##### debug(data to be logged):
 ```sh
 logger.debug("string"/<object>/<any>);
 ```
 
-#####log(data to be logged):
+##### log(data to be logged):
 ```sh
 logger.log("string"/<object>/<any>);
 ```
 
-#####info(data to be logged):
+##### info(data to be logged):
 ```sh
 logger.info("string"/<object>/<any>);
 ```
 
-#####warn(data to be logged):
+##### warn(data to be logged):
 ```sh
 logger.warn("string"/<object>/<any>);
 ```
 
-#####error(data to be logged):
+##### error(data to be logged):
 ```sh
 logger.error("string"/<object>/<any>);
 //pass directly the error object to get better stack trace results in the bugsnag.
 ```
 
-#####If you want to log the message to console too:
+##### If you want to log the message to console too:
 
 ```sh
 logger.logAPI.on("logging", function (transport, level, msg, meta) {
