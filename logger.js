@@ -2,27 +2,48 @@
  * Logger Module
  * Each logger object automatically detects the process type, 
  * creates seperate log based on its process type.
- * If any error occurs, it is automatically notified using bugsnag.
  */
-let winston = require("winston");
-let fs = require("fs-extra");
-let util = require("util");
-let path = require("path");
-let jsZip = require("jszip");
-let bugsnag = require("bugsnag");
-let store = require("electron-store");
+let winston = require('winston');
+let fs = require('fs-extra');
+let util = require('util');
+let path = require('path');
+let jsZip = require('jszip');
+let appRootDirectory = require('app-root-dir');
+let settings;
 
-store = new store({
-  name: "logger"
-});
 
-//Persisting Logging Settings in other required modules
-if (!store.has('fileLogging')) {
-  store.set('fileLogging', true);
+/**
+ * Creating logger session 
+ * Object.
+ */
+if (process.type === 'browser') {
+  global.loggerSettings = {
+    FILE_LOGGING: true,
+    SESSION: createNewSession(),
+    LOGS_EXPIRY: 7,
+    ENABLE_BUGSNAG: false
+  }
 }
 
-const LOGS_EXPIRY = store.has('LOGS_EXPIRY') ? store.get('LOGS_EXPIRY') : 7;
-const APP_NAME = getAppName() || "electron-app";
+
+function getSettings() {
+  if (settings)
+    return settings;
+
+  if (process.type === 'browser') {
+    return global.loggerSettings;
+  } else {
+    let {
+            remote
+        } = require('electron');
+    return remote.getGlobal('loggerSettings');
+  }
+}
+
+settings = getSettings();
+
+const LOGS_EXPIRY = settings.LOGS_EXPIRY;
+const APP_NAME = getAppName() || 'electron-app';
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
 const CUSTOMLEVELS = {
   levels: {
@@ -32,10 +53,10 @@ const CUSTOMLEVELS = {
     error: 3
   },
   colors: {
-    debug: "blue",
-    info: "green",
-    warn: "yellow",
-    error: "red"
+    debug: 'blue',
+    info: 'green',
+    warn: 'yellow',
+    error: 'red'
   }
 };
 
@@ -46,7 +67,7 @@ const CUSTOMLEVELS = {
  * @param  {string}
  * @return {object}
  */
-function getConfig(type, isWebview, domain = "webview", fileName) {
+function getConfig(type, isWebview, domain = 'webview', fileName) {
   let filename = null;
   let config = {
     name: 'fileTransport',
@@ -57,13 +78,13 @@ function getConfig(type, isWebview, domain = "webview", fileName) {
     filename: null,
     timestamp: function () {
       let now = new Date();
-      return `${now.toLocaleString("en-US", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
+      return `${now.toLocaleString('en-US', {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
         hour12: false
       })}.${now.getMilliseconds()}`;
     },
@@ -72,15 +93,14 @@ function getConfig(type, isWebview, domain = "webview", fileName) {
     }
   };
   switch (type) {
-    case "renderer":
+    case 'renderer':
       if (isWebview) {
         filename = `${domain}.log`;
       } else {
         filename = `renderer.log`;
       }
       break;
-    case "browser":
-      createNewSession();
+    case 'browser':
       filename = `main.log`;
       break;
     default:
@@ -89,7 +109,7 @@ function getConfig(type, isWebview, domain = "webview", fileName) {
   if (fileName) {
     filename = filename.replace(/^/, `${fileName}-`);
   }
-  let sessionFolder = store.get('session');
+  let sessionFolder = settings.SESSION || '';
   if (!fs.existsSync(path.join(LOGSDIR, sessionFolder))) {
     fs.mkdirSync(path.join(LOGSDIR, sessionFolder));
   }
@@ -104,7 +124,7 @@ function getConfig(type, isWebview, domain = "webview", fileName) {
 function getAppDataLoc() {
   return (
     process.env.LOCALAPPDATA ||
-    path.join(process.env.HOME, "/Library/Application Support")
+    path.join(process.env.HOME, 'Library', 'Application Support')
   );
 }
 
@@ -113,12 +133,12 @@ function getAppDataLoc() {
  * @return {string}
  */
 function getAppName() {
-  let parent = require(`${path.join(require('app-root-dir').get(), 'package.json')}`);
-  if (parent) {
-    return parent.name;
-  }
-  else
-    return null;
+  try {
+    let manifest = require(`${path.join(appRootDirectory.get(), 'package.json')}`);
+    if (manifest) {
+      return manifest.name;
+    }
+  } catch (e) { }
 }
 
 /**
@@ -126,17 +146,17 @@ function getAppName() {
  */
 function createNewSession() {
   let date = new Date();
-  let timestamp = `${date.toLocaleString("en-US", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+  let timestamp = `${date.toLocaleString('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
     hour12: false
   })}`;
-  timestamp = timestamp.replace(/\/|:/g, "-").replace(/, /g, "_");
-  store.set('session', timestamp);
+  timestamp = timestamp.replace(/\/|:/g, '-').replace(/, /g, '_');
+  return timestamp;
 }
 
 /**
@@ -153,9 +173,9 @@ function getLogExpiry() {
  * @return {string} 
  */
 function getMessage(content) {
-  let data = "";
+  let data = '';
   for (let value of content) {
-    data += util.inspect(value) + "\n\t";
+    data += util.inspect(value) + '\n\t';
   }
   return data;
 }
@@ -212,12 +232,12 @@ async function getRecentLogs() {
     return new Promise(resolve => {
       zip
         .generateNodeStream({
-          type: "nodebuffer",
+          type: 'nodebuffer',
           streamFiles: true,
-          compression: "DEFLATE"
+          compression: 'DEFLATE'
         })
         .pipe(fs.createWriteStream(path.join(LOGSDIR, zipName)))
-        .on("finish", () => {
+        .on('finish', () => {
           resolve(path.join(LOGSDIR, zipName));
         });
     });
@@ -253,23 +273,28 @@ async function pruneOldLogs() {
  * @param {string} level 
  */
 function logIt(context, content, level) {
-  if (store.get('fileLogging'))
+  if (settings.FILE_LOGGING)
     context.logAPI[level](getMessage(content));
 }
 
 class Logger {
-  constructor({ fileName = "",
+  static getLogsDirectory() {
+    return LOGSDIR;
+  }
+
+  constructor({
+        fileName = '',
     bugsnagKey = null,
     isWebview = false,
     domain = null,
     type = process.type
-  }) {
+    }) {
     if (!fs.existsSync(LOGSDIR)) {
       fs.mkdirSync(LOGSDIR);
     }
     pruneOldLogs();
     this.logAPI = new winston.Logger({
-      level: "error",
+      level: 'error',
       exitOnError: false,
       levels: CUSTOMLEVELS.levels,
       transports: [
@@ -279,31 +304,30 @@ class Logger {
       ]
     });
     this.isWebview = isWebview;
-    if (bugsnagKey) {
+    if (bugsnagKey && settings.ENABLE_BUGSNAG) {
       this.bugsnagIntegrated = true;
       bugsnag.register(bugsnagKey, {
         autoNotify: false
       });
-    }
-    else {
+    } else {
       this.bugsnagIntegrated = false;
     }
     winston.addColors(CUSTOMLEVELS.colors);
   }
   debug(...content) {
-    logIt(this, content, "debug");
+    logIt(this, content, 'debug');
   }
   log(...content) {
-    logIt(this, content, "info");
+    logIt(this, content, 'info');
   }
   info(...content) {
-    logIt(this, content, "info");
+    logIt(this, content, 'info');
   }
   warn(...content) {
-    logIt(this, content, "warn");
+    logIt(this, content, 'warn');
   }
   error(...content) {
-    logIt(this, content, "error");
+    logIt(this, content, 'error');
     if (!this.isWebview && this.bugsnagIntegrated) {
       bugsnag.notify(new Error(content));
     }
@@ -318,16 +342,19 @@ class Logger {
     return fs.remove(path);
   }
   enableLogging() {
-    store.set('fileLogging', true);
-    return "Logging Enabled";
+    // TODO: with IPC
+    // store.set('fileLogging', true);
+    // return 'Logging Enabled';
   }
   disableLogging() {
-    store.set('fileLogging', false);
-    return "Logging Disabled";
+    // TODO: with IPC
+    // store.set('fileLogging', false);
+    // return 'Logging Disabled';
   }
   setLogExpiry(logExpiry) {
-    if (logExpiry > 0 && logExpiry <= 60)
-      store.set('LOGS_EXPIRY', logExpiry);
+    // TODO: with IPC
+    // if (logExpiry > 0 && logExpiry <= 60)
+    // store.set('LOGS_EXPIRY', logExpiry);
   }
 }
 module.exports = Logger;
