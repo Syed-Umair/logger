@@ -122,10 +122,10 @@ function getConfig(type, isWebview, domain = 'webview', fileName) {
  * @return {string}
  */
 function getAppDataLoc() {
-  return (
-    process.env.LOCALAPPDATA ||
-    path.join(process.env.HOME, 'Library', 'Application Support')
-  );
+  if (/^win/.test(process.platform))
+    return process.env.LOCALAPPDATA;
+  else
+    return path.join(process.env.HOME, 'Library', 'Application Support');
 }
 
 /**
@@ -283,7 +283,7 @@ class Logger {
   }
 
   constructor({
-        fileName = '',
+    fileName = '',
     bugsnagKey = null,
     isWebview = false,
     domain = null,
