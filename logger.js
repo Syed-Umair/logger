@@ -276,6 +276,18 @@ function logIt(context, content, level) {
   if (settings.FILE_LOGGING)
     context.logAPI[level](getMessage(content));
 }
+/**
+ * Gives the domain
+ * @param {string} url 
+ */
+function parseDomain(url){
+  let domain = url.match(/\/\/(.+?)\//) 
+  ? url.match(/\/\/(.+?)\//).pop() 
+  : url.match(/\/\/(.+)/) 
+  ? url.match(/\/\/(.+)/).pop() 
+  : url;
+  return domain;
+}
 
 class Logger {
   static getLogsDirectory() {
@@ -293,6 +305,9 @@ class Logger {
       fs.mkdirSync(LOGSDIR);
     }
     pruneOldLogs();
+    if (domain){
+      domain = parseDomain();
+    }
     this.logAPI = new winston.Logger({
       level: 'error',
       exitOnError: false,
