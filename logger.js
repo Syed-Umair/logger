@@ -306,7 +306,7 @@ class Logger {
     }
     pruneOldLogs();
     if (domain){
-      domain = parseDomain();
+      domain = parseDomain(domain);
     }
     this.logAPI = new winston.Logger({
       level: 'error',
