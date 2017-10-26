@@ -4,6 +4,7 @@
  * creates seperate log based on its process type.
  */
 let winston = require('winston');
+let {shell} = require('electron');
 let fs = require('fs-extra');
 let util = require('util');
 let path = require('path');
@@ -290,10 +291,7 @@ function parseDomain(url){
 }
 
 class Logger {
-  static getLogsDirectory() {
-    return LOGSDIR;
-  }
-
+  
   constructor({
     fileName = '',
     bugsnagKey = null,
@@ -355,6 +353,12 @@ class Logger {
   }
   clearLogArchive(path) {
     return fs.remove(path);
+  }
+  openLogsDirectory() {
+    shell.openItem(LOGSDIR);
+  }
+  getLogsDirectory() {
+    return LOGSDIR;
   }
   enableLogging() {
     // TODO: with IPC
