@@ -1,21 +1,24 @@
 /**
  * Logger Module
- * Each logger object automatically detects the process type, 
+ * Each logger object automatically detects the process type,
  * creates seperate log based on its process type.
  */
 let winston = require('winston');
-let {shell} = require('electron');
+let {
+  shell
+} = require('electron');
 let fs = require('fs-extra');
 let util = require('util');
 let path = require('path');
 let jsZip = require('jszip');
 let appRootDirectory = require('app-root-dir');
+let EventEmitter = require('events');
+let emitter = new EventEmitter();
 let settings;
 
 
 /**
- * Creating logger session 
- * Object.
+ * Creating logger session settings in global
  */
 if (process.type === 'browser') {
   global.loggerSettings = {
@@ -26,7 +29,24 @@ if (process.type === 'browser') {
   }
 }
 
+emitter.on('updateSettings', function(setting) {
+  switch (setting.name) {
+    case 'FILE_LOGGING':
+      settings.FILE_LOGGING = setting.value;
+      break;
+    case 'updateLogExpiry':
+      settings.LOGS_EXPIRY = setting.value;
+      break;
+    case 'updateBugsnag':
+      settings.ENABLE_BUGSNAG = setting.value;
+      break;
+  }
+});
 
+/**
+ * Returns loggerSettings
+ * @return {object}
+ */
 function getSettings() {
   if (settings)
     return settings;
@@ -35,15 +55,14 @@ function getSettings() {
     return global.loggerSettings;
   } else {
     let {
-            remote
-        } = require('electron');
+      remote
+    } = require('electron');
     return remote.getGlobal('loggerSettings');
   }
 }
 
 settings = getSettings();
 
-const LOGS_EXPIRY = settings.LOGS_EXPIRY;
 const APP_NAME = getAppName() || 'electron-app';
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
 const CUSTOMLEVELS = {
@@ -68,7 +87,7 @@ const CUSTOMLEVELS = {
  * @param  {string}
  * @return {object}
  */
-function getConfig(type, isWebview, domain = 'webview', fileName) {
+function getConfig(type, isWebview, fileName) {
   let filename = null;
   let config = {
     name: 'fileTransport',
@@ -96,7 +115,7 @@ function getConfig(type, isWebview, domain = 'webview', fileName) {
   switch (type) {
     case 'renderer':
       if (isWebview) {
-        filename = `${domain}.log`;
+        filename = `webview.log`;
       } else {
         filename = `renderer.log`;
       }
@@ -110,10 +129,7 @@ function getConfig(type, isWebview, domain = 'webview', fileName) {
   if (fileName) {
     filename = filename.replace(/^/, `${fileName}-`);
   }
-  let sessionFolder = settings.SESSION || '';
-  if (!fs.existsSync(path.join(LOGSDIR, sessionFolder))) {
-    fs.mkdirSync(path.join(LOGSDIR, sessionFolder));
-  }
+  let sessionFolder = settings.SESSION;
   config.filename = path.join(LOGSDIR, sessionFolder, filename);
   return config;
 }
@@ -124,7 +140,7 @@ function getConfig(type, isWebview, domain = 'webview', fileName) {
  */
 function getAppDataLoc() {
   if (/^win/.test(process.platform))
-    return process.env.LOCALAPPDATA;
+    return path.join(process.env.USERPROFILE, 'AppData', 'local');
   else
     return path.join(process.env.HOME, 'Library', 'Application Support');
 }
@@ -139,7 +155,9 @@ function getAppName() {
     if (manifest) {
       return manifest.name;
     }
-  } catch (e) { }
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 /**
@@ -156,7 +174,9 @@ function createNewSession() {
     second: '2-digit',
     hour12: false
   })}`;
-  timestamp = timestamp.replace(/\/|:/g, '-').replace(/, /g, '_');
+  timestamp = timestamp.replace(/\/|:/g, '-')
+    .replace(/, /g, '_')
+    .concat(`.${date.getMilliseconds()}`);
   return timestamp;
 }
 
@@ -165,13 +185,13 @@ function createNewSession() {
  * @return {ms}
  */
 function getLogExpiry() {
-  return new Date().getTime() - 24 * 60 * 60 * 1000 * LOGS_EXPIRY;
+  return new Date().getTime() - 24 * 60 * 60 * 1000 * settings.LOGS_EXPIRY;
 }
 
 /**
  * Converts input content to String using util.inspect
- * @param  {array} 
- * @return {string} 
+ * @param  {array}
+ * @return {string}
  */
 function getMessage(content) {
   let data = '';
@@ -192,8 +212,7 @@ async function getContents(path) {
       return !((/^\./.test(file)) || (/.zip$/.test(file)))
     });
   } catch (e) {
-    console.log(e);
-    return e;
+    console.error(e);
   }
 }
 
@@ -207,14 +226,13 @@ async function getLogCreationTime(file) {
     let stat = await fs.stat(path.join(LOGSDIR, file));
     return stat.birthtime.getTime();
   } catch (e) {
-    console.log(e);
-    return e;
+    console.error(e);
   }
 }
 
 /**
  * Archives recent logs and returns zip path
- * @return {string} 
+ * @return {string}
  */
 async function getRecentLogs() {
   try {
@@ -243,8 +261,7 @@ async function getRecentLogs() {
         });
     });
   } catch (e) {
-    console.log(e);
-    return e;
+    console.error(e);
   }
 }
 
@@ -260,51 +277,57 @@ async function pruneOldLogs() {
         await fs.remove(path.join(LOGSDIR, session));
       }
     }
-    return `Logs older than ${LOGS_EXPIRY} day(s) Cleared`;
+    return `Logs older than ${settings.LOGS_EXPIRY} day(s) Cleared`;
   } catch (e) {
-    console.log(e);
-    return e;
+    console.error(e);
   }
 }
 
 /**
  * Logs the content
- * @param {object} context 
- * @param {string} content 
- * @param {string} level 
+ * @param {object} context
+ * @param {string} content
+ * @param {string} level
  */
 function logIt(context, content, level) {
-  if (settings.FILE_LOGGING)
-    context.logAPI[level](getMessage(content));
+  try {
+    if (settings.FILE_LOGGING) {
+      if (!fs.existsSync(LOGSDIR)) {
+        fs.mkdirSync(LOGSDIR);
+      }
+      if (!fs.existsSync(path.join(LOGSDIR, settings.SESSION))) {
+        fs.mkdirSync(path.join(LOGSDIR, settings.SESSION));
+      }
+      context.logAPI[level](getMessage(content));
+    }
+  } catch (e) {
+    console.error(e);
+  }
 }
 /**
  * Gives the domain
- * @param {string} url 
+ * @param {string} url
  */
-function parseDomain(url){
-  let domain = url.match(/\/\/(.+?)\//) 
-  ? url.match(/\/\/(.+?)\//).pop() 
-  : url.match(/\/\/(.+)/) 
-  ? url.match(/\/\/(.+)/).pop() 
-  : url;
+function parseDomain(url) {
+  let domain = url.match(/\/\/(.+?)\//) ?
+    url.match(/\/\/(.+?)\//).pop() :
+    url.match(/\/\/(.+)/) ?
+    url.match(/\/\/(.+)/).pop() :
+    url;
   return domain;
 }
 
 class Logger {
-  
+
   constructor({
     fileName = '',
     bugsnagKey = null,
     isWebview = false,
-    domain = null,
     type = process.type
-    }) {
-    if (!fs.existsSync(LOGSDIR)) {
-      fs.mkdirSync(LOGSDIR);
-    }
+  }) {
     pruneOldLogs();
-    if (domain){
-      domain = parseDomain(domain);
+    if (fileName) {
+      fileName = parseDomain(fileName);
     }
     this.logAPI = new winston.Logger({
       level: 'error',
@@ -312,18 +335,20 @@ class Logger {
       levels: CUSTOMLEVELS.levels,
       transports: [
         new winston.transports.File(
-          getConfig(type, isWebview, domain, fileName)
+          getConfig(type, isWebview, fileName)
         )
       ]
     });
     this.isWebview = isWebview;
-    if (bugsnagKey && settings.ENABLE_BUGSNAG) {
-      this.bugsnagIntegrated = true;
-      bugsnag.register(bugsnagKey, {
-        autoNotify: false
-      });
-    } else {
-      this.bugsnagIntegrated = false;
+    if (bugsnagKey) {
+      settings.ENABLE_BUGSNAG = true;
+      try {
+          bugsnag.register(bugsnagKey, {
+          autoNotify: false
+        });
+      } catch(e){
+        console.error(e);
+      }
     }
     winston.addColors(CUSTOMLEVELS.colors);
   }
@@ -341,7 +366,7 @@ class Logger {
   }
   error(...content) {
     logIt(this, content, 'error');
-    if (!this.isWebview && this.bugsnagIntegrated) {
+    if (!this.isWebview && settings.ENABLE_BUGSNAG) {
       bugsnag.notify(new Error(content));
     }
   }
@@ -361,19 +386,45 @@ class Logger {
     return LOGSDIR;
   }
   enableLogging() {
-    // TODO: with IPC
-    // store.set('fileLogging', true);
-    // return 'Logging Enabled';
+    settings.FILE_LOGGING = true;
+    emitter.emit('updateSettings', {
+      name: 'FILE_LOGGING',
+      value: true
+    });
+    return 'Logging Enabled';
   }
   disableLogging() {
-    // TODO: with IPC
-    // store.set('fileLogging', false);
-    // return 'Logging Disabled';
+    settings.FILE_LOGGING = false;
+    emitter.emit('updateSettings', {
+      name: 'FILE_LOGGING',
+      value: false
+    });
+    return 'Logging Disabled';
   }
   setLogExpiry(logExpiry) {
-    // TODO: with IPC
-    // if (logExpiry > 0 && logExpiry <= 60)
-    // store.set('LOGS_EXPIRY', logExpiry);
+    logExpiry = parseInt(logExpiry);
+    if (logExpiry > 0 && logExpiry <= 30){
+      settings.LOGS_EXPIRY = logExpiry;
+      emitter.emit('updateSettings', {
+        name: 'updateLogExpiry',
+        value: logExpiry
+      });
+      return `Logs Expiry set to ${logExpiry}`;
+    }
+  }
+  disableBugsnag(){
+    settings.ENABLE_BUGSNAG = false;
+    emitter.emit('updateSettings', {
+      name: 'updateBugsnag',
+      value: false
+    });
+  }
+  enableBugsnag(){
+    settings.ENABLE_BUGSNAG = true;
+    emitter.emit('updateSettings', {
+      name: 'updateBugsnag',
+      value: true
+    });
   }
 }
 module.exports = Logger;
