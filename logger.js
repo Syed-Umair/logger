@@ -31,7 +31,7 @@ if (process.type === 'browser') {
 
 emitter.on('updateSettings', function(setting) {
   switch (setting.name) {
-    case 'FILE_LOGGING':
+    case 'updateLogging':
       settings.FILE_LOGGING = setting.value;
       break;
     case 'updateLogExpiry':
@@ -388,7 +388,7 @@ class Logger {
   enableLogging() {
     settings.FILE_LOGGING = true;
     emitter.emit('updateSettings', {
-      name: 'FILE_LOGGING',
+      name: 'updateLogging',
       value: true
     });
     return 'Logging Enabled';
@@ -396,7 +396,7 @@ class Logger {
   disableLogging() {
     settings.FILE_LOGGING = false;
     emitter.emit('updateSettings', {
-      name: 'FILE_LOGGING',
+      name: 'updateLogging',
       value: false
     });
     return 'Logging Disabled';
