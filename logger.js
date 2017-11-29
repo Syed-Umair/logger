@@ -4,6 +4,7 @@
  * creates seperate log based on its process type.
  */
 let winston = require('winston');
+let bugsnag = require("bugsnag");
 let {
   shell
 } = require('electron');
