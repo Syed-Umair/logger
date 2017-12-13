@@ -6,16 +6,21 @@
 let winston = require('winston');
 let bugsnag = require("bugsnag");
 let {
-  shell
+  shell,
+  BrowserWindow
 } = require('electron');
 let fs = require('fs-extra');
 let util = require('util');
 let path = require('path');
 let jsZip = require('jszip');
 let appRootDirectory = require('app-root-dir');
-let EventEmitter = require('events');
-let emitter = new EventEmitter();
 let settings;
+let ipc;
+const SETTING_LIST = [
+  'FILE_LOGGING',
+  'LOGS_EXPIRY',
+  'ENABLE_BUGSNAG'
+]
 
 
 /**
@@ -28,21 +33,12 @@ if (process.type === 'browser') {
     LOGS_EXPIRY: 7,
     ENABLE_BUGSNAG: false
   }
+  ipc = require('electron').ipcMain;
+  ipc.on('updateSettings', mainSettingsHandler)
+} else {
+  ipc = require('electron').ipcRenderer;
+  ipc.on('updateSettings', rendererSettingsHandler);
 }
-
-emitter.on('updateSettings', function(setting) {
-  switch (setting.name) {
-    case 'updateLogging':
-      settings.FILE_LOGGING = setting.value;
-      break;
-    case 'updateLogExpiry':
-      settings.LOGS_EXPIRY = setting.value;
-      break;
-    case 'updateBugsnag':
-      settings.ENABLE_BUGSNAG = setting.value;
-      break;
-  }
-});
 
 /**
  * Returns loggerSettings
@@ -59,6 +55,41 @@ function getSettings() {
       remote
     } = require('electron');
     return remote.getGlobal('loggerSettings');
+  }
+}
+
+function mainSettingsHandler(){
+  for (let setting of arguments) {
+    if(setting.hasOwnProperty('name') && (SETTING_LIST.indexOf(setting.name) != -1)){
+      global.loggerSettings[setting.name] = setting.value;
+      settings[setting.name] = setting.value;
+      if(setting.push){
+        delete setting.push;
+        BrowserWindow.getAllWindows().forEach((win)=>{
+            win.webContents.send('updateSettings',setting);
+        })
+      }
+    }
+  }
+}
+
+function rendererSettingsHandler(){
+  for (let setting of arguments) {
+    if(setting.hasOwnProperty('name')){
+      settings[setting.name] = setting.value;
+      if(setting.push){
+        delete setting.push;
+        ipc.send('updateSettings', setting)
+      }
+    }
+  }
+}
+
+function handleSetting(setting){
+  if(process.type === 'browser'){
+    mainSettingsHandler(setting);
+  } else {
+    rendererSettingsHandler(setting);
   }
 }
 
@@ -388,17 +419,19 @@ class Logger {
   }
   enableLogging() {
     settings.FILE_LOGGING = true;
-    emitter.emit('updateSettings', {
-      name: 'updateLogging',
-      value: true
+    handleSetting({
+      name: 'FILE_LOGGING',
+      value: true,
+      push: true
     });
     return 'Logging Enabled';
   }
   disableLogging() {
     settings.FILE_LOGGING = false;
-    emitter.emit('updateSettings', {
-      name: 'updateLogging',
-      value: false
+    handleSetting({
+      name: 'FILE_LOGGING',
+      value: false,
+      push: true
     });
     return 'Logging Disabled';
   }
@@ -406,25 +439,28 @@ class Logger {
     logExpiry = parseInt(logExpiry);
     if (logExpiry > 0 && logExpiry <= 30){
       settings.LOGS_EXPIRY = logExpiry;
-      emitter.emit('updateSettings', {
-        name: 'updateLogExpiry',
-        value: logExpiry
+      handleSetting({
+        name: 'LOGS_EXPIRY',
+        value: logExpiry,
+        push: true
       });
       return `Logs Expiry set to ${logExpiry}`;
     }
   }
   disableBugsnag(){
     settings.ENABLE_BUGSNAG = false;
-    emitter.emit('updateSettings', {
-      name: 'updateBugsnag',
-      value: false
+    handleSetting({
+      name: 'ENABLE_BUGSNAG',
+      value: false,
+      push: true
     });
   }
   enableBugsnag(){
     settings.ENABLE_BUGSNAG = true;
-    emitter.emit('updateSettings', {
-      name: 'updateBugsnag',
-      value: true
+    handleSetting({
+      name: 'ENABLE_BUGSNAG',
+      value: true,
+      push: true
     });
   }
 }
