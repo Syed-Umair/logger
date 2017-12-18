@@ -203,6 +203,7 @@ function getAppName() {
     }
   } catch (e) {
     console.error(e);
+    handleError(e);
   }
 }
 
@@ -260,6 +261,7 @@ async function getContents(path) {
     });
   } catch (e) {
     console.error(e);
+    handleError(e);
   }
 }
 
@@ -274,6 +276,7 @@ async function getLogCreationTime(file) {
     return stat.birthtime.getTime();
   } catch (e) {
     console.error(e);
+    handleError(e);
   }
 }
 
@@ -309,6 +312,7 @@ async function getRecentLogs() {
     });
   } catch (e) {
     console.error(e);
+    handleError(e);
   }
 }
 
@@ -327,6 +331,7 @@ async function pruneOldLogs() {
     return `Logs older than ${settings.LOGS_EXPIRY} day(s) Cleared`;
   } catch (e) {
     console.error(e);
+    handleError(e);
   }
 }
 
@@ -349,7 +354,7 @@ function logIt(context, content, level) {
     }
   } catch (e) {
     console.error(e);
-    context.disableLogging();
+    handleError(e);
   }
 }
 
@@ -365,6 +370,20 @@ function parseDomain(url) {
     url.match(/\/\/(.+)/).pop() :
     url;
   return domain;
+}
+
+/**
+ * Notifies error to bugsnag if enabled and registered
+ * @param {Object} error 
+ */
+function handleError(error){
+  if(settings.ENABLE_BUGSNAG){
+    try{
+      bugsnag.notify(error);
+    } catch(e){
+      console.error(e);
+    }
+  }
 }
 
 class Logger {
@@ -416,8 +435,8 @@ class Logger {
   }
   error(...content) {
     logIt(this, content, 'error');
-    if (!this.isWebview && settings.ENABLE_BUGSNAG) {
-      bugsnag.notify(new Error(content));
+    if (!this.isWebview){
+      handleError(content);
     }
   }
   pruneOldLogs() {
