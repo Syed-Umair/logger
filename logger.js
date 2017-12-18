@@ -6,8 +6,7 @@
 let winston = require('winston');
 let bugsnag = require("bugsnag");
 let {
-  shell,
-  BrowserWindow
+  shell
 } = require('electron');
 let fs = require('fs-extra');
 let util = require('util');
@@ -20,81 +19,7 @@ const SETTING_LIST = [
   'FILE_LOGGING',
   'LOGS_EXPIRY',
   'ENABLE_BUGSNAG'
-]
-
-
-/**
- * Creating logger session settings in global
- */
-if (process.type === 'browser') {
-  global.loggerSettings = {
-    FILE_LOGGING: true,
-    SESSION: createNewSession(),
-    LOGS_EXPIRY: 7,
-    ENABLE_BUGSNAG: false
-  }
-  ipc = require('electron').ipcMain;
-  ipc.on('updateSettings', mainSettingsHandler)
-} else {
-  ipc = require('electron').ipcRenderer;
-  ipc.on('updateSettings', rendererSettingsHandler);
-}
-
-/**
- * Returns loggerSettings
- * @return {object}
- */
-function getSettings() {
-  if (settings)
-    return settings;
-
-  if (process.type === 'browser') {
-    return global.loggerSettings;
-  } else {
-    let {
-      remote
-    } = require('electron');
-    return remote.getGlobal('loggerSettings');
-  }
-}
-
-function mainSettingsHandler(){
-  for (let setting of arguments) {
-    if(setting.hasOwnProperty('name') && (SETTING_LIST.indexOf(setting.name) != -1)){
-      global.loggerSettings[setting.name] = setting.value;
-      settings[setting.name] = setting.value;
-      if(setting.push){
-        delete setting.push;
-        BrowserWindow.getAllWindows().forEach((win)=>{
-            win.webContents.send('updateSettings',setting);
-        })
-      }
-    }
-  }
-}
-
-function rendererSettingsHandler(){
-  for (let setting of arguments) {
-    if(setting.hasOwnProperty('name')){
-      settings[setting.name] = setting.value;
-      if(setting.push){
-        delete setting.push;
-        ipc.send('updateSettings', setting)
-      }
-    }
-  }
-}
-
-function handleSetting(setting){
-  if(process.type === 'browser'){
-    mainSettingsHandler(setting);
-  } else {
-    rendererSettingsHandler(setting);
-  }
-}
-
-settings = getSettings();
-
+];
 const APP_NAME = getAppName() || 'electron-app';
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
 const CUSTOMLEVELS = {
@@ -113,11 +38,100 @@ const CUSTOMLEVELS = {
 };
 
 /**
+ * Creating logger session settings in global
+ * Setting IPC handlers to recieve settings
+ */
+if (process.type === 'browser') {
+  global.loggerSettings = {
+    FILE_LOGGING: true,
+    SESSION: createNewSession(),
+    LOGS_EXPIRY: 7,
+    ENABLE_BUGSNAG: false
+  }
+  var { 
+    BrowserWindow,
+    ipcMain
+  } = require('electron');
+  ipc = ipcMain;
+  ipc.on('updateSettings', mainSettingsHandler)
+} else {
+  ipc = require('electron').ipcRenderer;
+  ipc.on('updateSettings', rendererSettingsHandler);
+}
+
+/**
+ * Caching settings locally
+ */
+settings = getSettings();
+
+/**
+ * Returns loggerSettings
+ * @return {object} loggerSettings
+ */
+function getSettings() {
+  if (settings)
+    return settings;
+
+  if (process.type === 'browser') {
+    return global.loggerSettings;
+  } else {
+    let {
+      remote
+    } = require('electron');
+    return remote.getGlobal('loggerSettings');
+  }
+}
+
+/**
+ * Handles Update Setting Request in main and push to all renderers
+ */
+function mainSettingsHandler(){
+  for (let setting of arguments) {
+    if(setting.hasOwnProperty('name') && (SETTING_LIST.indexOf(setting.name) != -1)){
+      global.loggerSettings[setting.name] = setting.value;
+      settings[setting.name] = setting.value;
+      if(setting.push){
+        delete setting.push;
+        BrowserWindow.getAllWindows().forEach((win)=>{
+            win.webContents.send('updateSettings',setting);
+        })
+      }
+    }
+  }
+}
+
+/**
+ * Handles Update Setting Request in renderer and push to request to main
+ */
+function rendererSettingsHandler(){
+  for (let setting of arguments) {
+    if(setting.hasOwnProperty('name') && (SETTING_LIST.indexOf(setting.name) != -1)){
+      settings[setting.name] = setting.value;
+      if(setting.push){
+        ipc.send('updateSettings', setting)
+      }
+    }
+  }
+}
+
+/**
+ * Assigns Handler based on process type
+ * @param {Object} setting 
+ */
+function handleSetting(setting){
+  if(process.type === 'browser'){
+    mainSettingsHandler(setting);
+  } else {
+    rendererSettingsHandler(setting);
+  }
+}
+
+/**
  * Setting up configuration for winston file transport and returns config object
- * @param  {process type}
- * @param  {Boolean}
- * @param  {string}
- * @return {object}
+ * @param  {String} type
+ * @param  {Boolean} isWebview
+ * @param  {String} fileName
+ * @return {Object} config
  */
 function getConfig(type, isWebview, fileName) {
   let filename = null;
@@ -168,7 +182,7 @@ function getConfig(type, isWebview, fileName) {
 
 /**
  * appdata location based on platform
- * @return {string}
+ * @return {String} path
  */
 function getAppDataLoc() {
   if (/^win/.test(process.platform))
@@ -179,7 +193,7 @@ function getAppDataLoc() {
 
 /**
  * returns the application name from the parent package.json
- * @return {string}
+ * @return {String} AppName
  */
 function getAppName() {
   try {
@@ -193,7 +207,8 @@ function getAppName() {
 }
 
 /**
- * creates and persists latest session in electron-store
+ * creates session timestamp
+ * @return {String} timestamp
  */
 function createNewSession() {
   let date = new Date();
@@ -214,7 +229,7 @@ function createNewSession() {
 
 /**
  * Log expiry time in milliseconds
- * @return {ms}
+ * @return {Number} expiryTime
  */
 function getLogExpiry() {
   return new Date().getTime() - 24 * 60 * 60 * 1000 * settings.LOGS_EXPIRY;
@@ -222,8 +237,8 @@ function getLogExpiry() {
 
 /**
  * Converts input content to String using util.inspect
- * @param  {array}
- * @return {string}
+ * @param  {Array} content
+ * @return {String} data
  */
 function getMessage(content) {
   let data = '';
@@ -235,7 +250,7 @@ function getMessage(content) {
 
 /**
  * Finds all log files in the @LOGSDIR and returns log files array
- * @return {array}
+ * @return {Array} files
  */
 async function getContents(path) {
   try {
@@ -250,8 +265,8 @@ async function getContents(path) {
 
 /**
  * Finds file creation time and returns file creation time in ms
- * @param  {file}
- * @return {ms}
+ * @param  {String} file
+ * @return {Number} creationTime
  */
 async function getLogCreationTime(file) {
   try {
@@ -264,7 +279,7 @@ async function getLogCreationTime(file) {
 
 /**
  * Archives recent logs and returns zip path
- * @return {string}
+ * @return {Promise} resolves Zip file location
  */
 async function getRecentLogs() {
   try {
@@ -299,7 +314,7 @@ async function getRecentLogs() {
 
 /**
  * Deletes logs Older than @LOGS_EXPIRY
- * @return {promise}
+ * @return {Promise} resolves older logs cleared message
  */
 async function pruneOldLogs() {
   try {
@@ -317,9 +332,9 @@ async function pruneOldLogs() {
 
 /**
  * Logs the content
- * @param {object} context
- * @param {string} content
- * @param {string} level
+ * @param {Object} context
+ * @param {String} content
+ * @param {String} level
  */
 function logIt(context, content, level) {
   try {
@@ -334,11 +349,14 @@ function logIt(context, content, level) {
     }
   } catch (e) {
     console.error(e);
+    context.disableLogging();
   }
 }
+
 /**
  * Gives the domain
- * @param {string} url
+ * @param {String} url
+ * @returns {String} reduced url
  */
 function parseDomain(url) {
   let domain = url.match(/\/\/(.+?)\//) ?
