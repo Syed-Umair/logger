@@ -44,6 +44,7 @@ const CUSTOMLEVELS = {
 if (process.type === 'browser') {
   global.loggerSettings = {
     FILE_LOGGING: true,
+    BUGSNAG_KEY: null,
     SESSION: createNewSession(),
     LOGS_EXPIRY: 7,
     ENABLE_BUGSNAG: false
@@ -251,13 +252,19 @@ function getMessage(content) {
 
 /**
  * Finds all log files in the @LOGSDIR and returns log files array
+ * @param {String} path
+ * @param {Boolean} includeZip
  * @return {Array} files
  */
-async function getContents(path) {
+async function getContents(path, includeZip = false) {
   try {
     let contents = await fs.readdir(path);
     return contents.filter(function (file) {
-      return !((/^\./.test(file)) || (/.zip$/.test(file)))
+      if(includeZip){
+        return !(/^\./.test(file))
+      } else {
+        return !((/^\./.test(file)) || (/.zip$/.test(file)))
+      }
     });
   } catch (e) {
     console.error(e);
@@ -322,7 +329,7 @@ async function getRecentLogs() {
  */
 async function pruneOldLogs() {
   try {
-    let sessions = await getContents(LOGSDIR);
+    let sessions = await getContents(LOGSDIR, true);
     for (let session of sessions) {
       if ((await getLogCreationTime(session)) < getLogExpiry()) {
         await fs.remove(path.join(LOGSDIR, session));
@@ -390,7 +397,7 @@ class Logger {
 
   constructor({
     fileName = '',
-    bugsnagKey = null,
+    bugsnagKey = settings.BUGSNAG_KEY,
     isWebview = false,
     type = process.type
   }) {
@@ -409,8 +416,12 @@ class Logger {
       ]
     });
     this.isWebview = isWebview;
-    if (bugsnagKey) {
+    if (bugsnagKey && !isWebview) {
       settings.ENABLE_BUGSNAG = true;
+      if(type === 'browser'){
+        settings.BUGSNAG_KEY = bugsnagKey;
+        global.loggerSettings.BUGSNAG_KEY = bugsnagKey;
+      }
       try {
           bugsnag.register(bugsnagKey, {
           autoNotify: false
