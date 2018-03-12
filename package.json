@@ -20,6 +20,6 @@
     "fs-extra": "latest",
     "jszip": "latest",
     "app-root-dir": "latest",
-    "winston": "latest"
+    "winston": "2.4.0"
   }
 }
