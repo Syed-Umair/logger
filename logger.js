@@ -4,10 +4,8 @@
  * creates seperate log based on its process type.
  */
 let winston = require('winston');
-let bugsnag = require("bugsnag");
-let {
-  shell
-} = require('electron');
+let bugsnag = require('bugsnag');
+let { shell } = require('electron');
 let fs = require('fs-extra');
 let util = require('util');
 let path = require('path');
@@ -15,11 +13,7 @@ let jsZip = require('jszip');
 let appRootDirectory = require('app-root-dir');
 let settings;
 let ipc;
-const SETTING_LIST = [
-  'FILE_LOGGING',
-  'LOGS_EXPIRY',
-  'ENABLE_BUGSNAG'
-];
+const SETTING_LIST = ['FILE_LOGGING', 'LOGS_EXPIRY', 'ENABLE_BUGSNAG'];
 const APP_NAME = getAppName() || 'electron-app';
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
 const CUSTOMLEVELS = {
@@ -28,12 +22,6 @@ const CUSTOMLEVELS = {
     info: 1,
     warn: 2,
     error: 3
-  },
-  colors: {
-    debug: 'blue',
-    info: 'green',
-    warn: 'yellow',
-    error: 'red'
   }
 };
 
@@ -48,13 +36,10 @@ if (process.type === 'browser') {
     SESSION: createNewSession(),
     LOGS_EXPIRY: 7,
     ENABLE_BUGSNAG: false
-  }
-  var { 
-    BrowserWindow,
-    ipcMain
-  } = require('electron');
+  };
+  var { BrowserWindow, ipcMain } = require('electron');
   ipc = ipcMain;
-  ipc.on('updateSettings', mainSettingsHandler)
+  ipc.on('updateSettings', mainSettingsHandler);
 } else {
   ipc = require('electron').ipcRenderer;
   ipc.on('updateSettings', rendererSettingsHandler);
@@ -70,32 +55,58 @@ settings = getSettings();
  * @return {object} loggerSettings
  */
 function getSettings() {
-  if (settings)
-    return settings;
+  if (settings) return settings;
 
   if (process.type === 'browser') {
     return global.loggerSettings;
   } else {
-    let {
-      remote
-    } = require('electron');
+    let { remote } = require('electron');
     return remote.getGlobal('loggerSettings');
   }
 }
 
 /**
+ * Returns default Options for Logger Configuration
+ * @return {object} Logger Instance Configuration
+ */
+function getDefaultOptions() {
+  let options = {
+    fileName: '',
+    bugsnagKey: settings.BUGSNAG_KEY,
+    isWebview: false,
+    type: process.type
+  };
+  //calculate name based on main-file-location  
+  options.fileName = process.mainModule
+    ? path.basename(process.mainModule.filename)
+    : getUniqueId();
+  return options;
+}
+
+/**
+ * Generates UniqueId using Math.Random
+ * @return {string} unique string
+ */
+function getUniqueId() {
+  return Math.floor(Math.random() * 10000000000 + 1).toString();
+}
+
+/**
  * Handles Update Setting Request in main and push to all renderers
  */
-function mainSettingsHandler(){
+function mainSettingsHandler() {
   for (let setting of arguments) {
-    if(setting.hasOwnProperty('name') && (SETTING_LIST.indexOf(setting.name) != -1)){
+    if (
+      setting.hasOwnProperty('name') &&
+      SETTING_LIST.indexOf(setting.name) != -1
+    ) {
       global.loggerSettings[setting.name] = setting.value;
       settings[setting.name] = setting.value;
-      if(setting.push){
+      if (setting.push) {
         delete setting.push;
-        BrowserWindow.getAllWindows().forEach((win)=>{
-            win.webContents.send('updateSettings',setting);
-        })
+        BrowserWindow.getAllWindows().forEach(win => {
+          win.webContents.send('updateSettings', setting);
+        });
       }
     }
   }
@@ -104,12 +115,15 @@ function mainSettingsHandler(){
 /**
  * Handles Update Setting Request in renderer and push to request to main
  */
-function rendererSettingsHandler(){
+function rendererSettingsHandler() {
   for (let setting of arguments) {
-    if(setting.hasOwnProperty('name') && (SETTING_LIST.indexOf(setting.name) != -1)){
+    if (
+      setting.hasOwnProperty('name') &&
+      SETTING_LIST.indexOf(setting.name) != -1
+    ) {
       settings[setting.name] = setting.value;
-      if(setting.push){
-        ipc.send('updateSettings', setting)
+      if (setting.push) {
+        ipc.send('updateSettings', setting);
       }
     }
   }
@@ -117,10 +131,10 @@ function rendererSettingsHandler(){
 
 /**
  * Assigns Handler based on process type
- * @param {Object} setting 
+ * @param {Object} setting
  */
-function handleSetting(setting){
-  if(process.type === 'browser'){
+function handleSetting(setting) {
+  if (process.type === 'browser') {
     mainSettingsHandler(setting);
   } else {
     rendererSettingsHandler(setting);
@@ -141,9 +155,8 @@ function getConfig(type, isWebview, fileName) {
     prettyPrint: true,
     levels: CUSTOMLEVELS.levels,
     json: false,
-    colorize: true,
     filename: null,
-    timestamp: function () {
+    timestamp: function() {
       let now = new Date();
       return `${now.toLocaleString('en-US', {
         day: '2-digit',
@@ -155,7 +168,7 @@ function getConfig(type, isWebview, fileName) {
         hour12: false
       })}.${now.getMilliseconds()}`;
     },
-    formatter: function (options) {
+    formatter: function(options) {
       return `${options.timestamp()}::${options.level}::${options.message}`;
     }
   };
@@ -188,8 +201,7 @@ function getConfig(type, isWebview, fileName) {
 function getAppDataLoc() {
   if (/^win/.test(process.platform))
     return path.join(process.env.USERPROFILE, 'AppData', 'local');
-  else
-    return path.join(process.env.HOME, 'Library', 'Application Support');
+  else return path.join(process.env.HOME, 'Library', 'Application Support');
 }
 
 /**
@@ -198,7 +210,10 @@ function getAppDataLoc() {
  */
 function getAppName() {
   try {
-    let manifest = require(`${path.join(appRootDirectory.get(), 'package.json')}`);
+    let manifest = require(`${path.join(
+      appRootDirectory.get(),
+      'package.json'
+    )}`);
     if (manifest) {
       return manifest.name;
     }
@@ -223,7 +238,8 @@ function createNewSession() {
     second: '2-digit',
     hour12: false
   })}`;
-  timestamp = timestamp.replace(/\/|:/g, '-')
+  timestamp = timestamp
+    .replace(/\/|:/g, '-')
     .replace(/, /g, '_')
     .concat(`.${date.getMilliseconds()}`);
   return timestamp;
@@ -259,11 +275,11 @@ function getMessage(content) {
 async function getContents(path, includeZip = false) {
   try {
     let contents = await fs.readdir(path);
-    return contents.filter(function (file) {
-      if(includeZip){
-        return !(/^\./.test(file))
+    return contents.filter(function(file) {
+      if (includeZip) {
+        return !/^\./.test(file);
       } else {
-        return !((/^\./.test(file)) || (/.zip$/.test(file)))
+        return !(/^\./.test(file) || /.zip$/.test(file));
       }
     });
   } catch (e) {
@@ -300,8 +316,10 @@ async function getRecentLogs() {
       if ((await getLogCreationTime(session)) >= getLogExpiry()) {
         let logs = await getContents(path.join(LOGSDIR, session));
         for (let log of logs) {
-          zip.file(`${session}/${log}`,
-            await fs.readFile(path.join(LOGSDIR, session, log)));
+          zip.file(
+            `${session}/${log}`,
+            await fs.readFile(path.join(LOGSDIR, session, log))
+          );
         }
       }
     }
@@ -371,23 +389,23 @@ function logIt(context, content, level) {
  * @returns {String} reduced url
  */
 function parseDomain(url) {
-  let domain = url.match(/\/\/(.+?)\//) ?
-    url.match(/\/\/(.+?)\//).pop() :
-    url.match(/\/\/(.+)/) ?
-    url.match(/\/\/(.+)/).pop() :
-    url;
+  let domain = url.match(/\/\/(.+?)\//)
+    ? url.match(/\/\/(.+?)\//).pop()
+    : url.match(/\/\/(.+)/)
+      ? url.match(/\/\/(.+)/).pop()
+      : url;
   return domain;
 }
 
 /**
  * Notifies error to bugsnag if enabled and registered
- * @param {Object} error 
+ * @param {Object} error
  */
-function handleError(error){
-  if(settings.ENABLE_BUGSNAG){
-    try{
+function handleError(error) {
+  if (settings.ENABLE_BUGSNAG) {
+    try {
       bugsnag.notify(error);
-    } catch(e){
+    } catch (e) {
       console.error(e);
     }
   }
@@ -395,12 +413,17 @@ function handleError(error){
 
 class Logger {
 
-  constructor({
-    fileName = '',
-    bugsnagKey = settings.BUGSNAG_KEY,
-    isWebview = false,
-    type = process.type
-  }) {
+  constructor(
+    {
+      fileName = getUniqueId(),
+      bugsnagKey = settings.BUGSNAG_KEY,
+      isWebview = false,
+      type = process.type
+    } = getDefaultOptions()
+  ) {
+    if (Logger.instanceList[process.pid]) {
+      return Logger.instanceList[process.pid];
+    }
     pruneOldLogs();
     if (fileName) {
       fileName = parseDomain(fileName);
@@ -410,27 +433,25 @@ class Logger {
       exitOnError: false,
       levels: CUSTOMLEVELS.levels,
       transports: [
-        new winston.transports.File(
-          getConfig(type, isWebview, fileName)
-        )
+        new winston.transports.File(getConfig(type, isWebview, fileName))
       ]
     });
     this.isWebview = isWebview;
     if (bugsnagKey && !isWebview) {
       settings.ENABLE_BUGSNAG = true;
-      if(type === 'browser'){
+      if (type === 'browser') {
         settings.BUGSNAG_KEY = bugsnagKey;
         global.loggerSettings.BUGSNAG_KEY = bugsnagKey;
       }
       try {
-          bugsnag.register(bugsnagKey, {
+        bugsnag.register(bugsnagKey, {
           autoNotify: false
         });
-      } catch(e){
+      } catch (e) {
         console.error(e);
       }
     }
-    winston.addColors(CUSTOMLEVELS.colors);
+    Logger.instanceList[process.type] = this;
   }
   debug(...content) {
     logIt(this, content, 'debug');
@@ -446,7 +467,7 @@ class Logger {
   }
   error(...content) {
     logIt(this, content, 'error');
-    if (!this.isWebview){
+    if (!this.isWebview) {
       handleError(content);
     }
   }
@@ -454,7 +475,7 @@ class Logger {
     return pruneOldLogs();
   }
   getLogArchive() {
-    return getRecentLogs()
+    return getRecentLogs();
   }
   clearLogArchive(path) {
     return fs.remove(path);
@@ -485,7 +506,7 @@ class Logger {
   }
   setLogExpiry(logExpiry) {
     logExpiry = parseInt(logExpiry);
-    if (logExpiry > 0 && logExpiry <= 30){
+    if (logExpiry > 0 && logExpiry <= 30) {
       settings.LOGS_EXPIRY = logExpiry;
       handleSetting({
         name: 'LOGS_EXPIRY',
@@ -495,7 +516,7 @@ class Logger {
       return `Logs Expiry set to ${logExpiry}`;
     }
   }
-  disableBugsnag(){
+  disableBugsnag() {
     settings.ENABLE_BUGSNAG = false;
     handleSetting({
       name: 'ENABLE_BUGSNAG',
@@ -503,7 +524,7 @@ class Logger {
       push: true
     });
   }
-  enableBugsnag(){
+  enableBugsnag() {
     settings.ENABLE_BUGSNAG = true;
     handleSetting({
       name: 'ENABLE_BUGSNAG',
@@ -512,4 +533,5 @@ class Logger {
     });
   }
 }
+Logger.instanceList = {};
 module.exports = Logger;
