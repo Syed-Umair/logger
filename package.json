@@ -1,6 +1,6 @@
 {
   "name": "logger-electron",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "description": "Logger For Electron Apps",
   "main": "logger.js",
   "scripts": {},
@@ -12,7 +12,7 @@
   "author": {
     "name": "syed_umair",
     "email": "umairpro1@outlook.com",
-    "url": "ideasyed.ml"
+    "url": "syedumair.ml"
   },
   "license": "MIT",
   "dependencies": {

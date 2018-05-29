@@ -13,6 +13,7 @@ let jsZip = require('jszip');
 let appRootDirectory = require('app-root-dir');
 let settings;
 let ipc;
+let instanceList = new Map();
 const SETTING_LIST = ['FILE_LOGGING', 'LOGS_EXPIRY', 'ENABLE_BUGSNAG'];
 const APP_NAME = getAppName() || 'electron-app';
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
@@ -76,7 +77,7 @@ function getDefaultOptions() {
     isWebview: false,
     type: process.type
   };
-  //calculate name based on main-file-location  
+  //calculate name based on main-file-location
   options.fileName = process.mainModule
     ? path.basename(process.mainModule.filename)
     : getUniqueId();
@@ -412,7 +413,6 @@ function handleError(error) {
 }
 
 class Logger {
-
   constructor(
     {
       fileName = getUniqueId(),
@@ -421,8 +421,8 @@ class Logger {
       type = process.type
     } = getDefaultOptions()
   ) {
-    if (Logger.instanceList[process.pid]) {
-      return Logger.instanceList[process.pid];
+    if (instanceList.has(process.pid)) {
+      return instanceList.get(process.pid);
     }
     pruneOldLogs();
     if (fileName) {
@@ -451,7 +451,7 @@ class Logger {
         console.error(e);
       }
     }
-    Logger.instanceList[process.type] = this;
+    instanceList.set(process.pid, this);
   }
   debug(...content) {
     logIt(this, content, 'debug');
@@ -533,5 +533,4 @@ class Logger {
     });
   }
 }
-Logger.instanceList = {};
 module.exports = Logger;
