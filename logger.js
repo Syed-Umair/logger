@@ -18,12 +18,10 @@ const SETTING_LIST = ['FILE_LOGGING', 'LOGS_EXPIRY', 'ENABLE_BUGSNAG'];
 const APP_NAME = getAppName() || 'electron-app';
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
 const CUSTOMLEVELS = {
-  levels: {
-    debug: 0,
-    info: 1,
-    warn: 2,
-    error: 3
-  }
+  error: 0,
+  warn: 1,
+  info: 2,
+  debug: 3
 };
 
 /**
@@ -73,7 +71,7 @@ function getSettings() {
 function getDefaultOptions() {
   let options = {
     fileName: '',
-    bugsnagKey: settings.BUGSNAG_KEY,
+    bugsnagKey: settings ? settings.BUGSNAG_KEY : null,
     isWebview: false,
     type: process.type
   };
@@ -421,6 +419,13 @@ class Logger {
       type = process.type
     } = getDefaultOptions()
   ) {
+    // A patch to fix the logger in the test mode
+    if (!settings){
+      console.logAPI = {
+        on: function(){}
+      }
+      return console;
+    }
     if (instanceList.has(process.pid)) {
       return instanceList.get(process.pid);
     }
@@ -428,12 +433,13 @@ class Logger {
     if (fileName) {
       fileName = parseDomain(fileName);
     }
-    this.logAPI = new winston.Logger({
-      level: 'error',
+    this.logAPI = winston.createLogger({
+      level: 'debug',
       exitOnError: false,
       levels: CUSTOMLEVELS.levels,
       transports: [
-        new winston.transports.File(getConfig(type, isWebview, fileName))
+        new winston.transports.File(getConfig(type, isWebview, fileName)),
+        new winston.transports.Console()
       ]
     });
     this.isWebview = isWebview;

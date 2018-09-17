@@ -1,6 +1,6 @@
 {
   "name": "logger-electron",
-  "version": "1.5.8",
+  "version": "1.5.9",
   "description": "Logger For Electron Apps",
   "main": "logger.js",
   "scripts": {},
@@ -11,15 +11,15 @@
   "repository": "https://github.com/Syed-Umair/logger",
   "author": {
     "name": "syed_umair",
-    "email": "umairpro1@outlook.com",
+    "email": "ideasyed@protonmail.com",
     "url": "syedumair.ml"
   },
   "license": "MIT",
   "dependencies": {
-    "bugsnag" : "latest",
-    "fs-extra": "latest",
-    "jszip": "latest",
-    "app-root-dir": "latest",
-    "winston": "2.4.0"
+    "bugsnag" : "2.4.3",
+    "fs-extra": "7.0.0",
+    "jszip": "3.1.5",
+    "app-root-dir": "1.0.2",
+    "winston": "3.1.0"
   }
 }
