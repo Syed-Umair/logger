@@ -140,6 +140,23 @@ function handleSetting(setting) {
   }
 }
 
+function getTimeStamp() {
+  let now = new Date();
+  return `${now.toLocaleString('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })}.${now.getMilliseconds()}`;
+}
+
+const logFormat = winston.format.printf((info) => {
+  return `${getTimeStamp()}::${info.level}::${info.message}`;
+});
+
 /**
  * Setting up configuration for winston file transport and returns config object
  * @param  {String} type
@@ -150,26 +167,7 @@ function handleSetting(setting) {
 function getConfig(type, isWebview, fileName) {
   let filename = null;
   let config = {
-    name: 'fileTransport',
-    prettyPrint: true,
-    levels: CUSTOMLEVELS.levels,
-    json: false,
-    filename: null,
-    timestamp: function() {
-      let now = new Date();
-      return `${now.toLocaleString('en-US', {
-        day: '2-digit',
-        month: '2-digit',
-        year: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      })}.${now.getMilliseconds()}`;
-    },
-    formatter: function(options) {
-      return `${options.timestamp()}::${options.level}::${options.message}`;
-    }
+    filename: null
   };
   switch (type) {
     case 'renderer':
@@ -437,6 +435,10 @@ class Logger {
       level: 'debug',
       exitOnError: false,
       levels: CUSTOMLEVELS.levels,
+      format: winston.format.combine(
+        winston.format.prettyPrint(),
+        logFormat
+      ),
       transports: [
         new winston.transports.File(getConfig(type, isWebview, fileName)),
         new winston.transports.Console()
