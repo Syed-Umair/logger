@@ -1,25 +1,43 @@
 {
   "name": "logger-electron",
-  "version": "1.5.10",
+  "version": "1.6.0",
   "description": "Logger For Electron Apps",
-  "main": "logger.js",
-  "scripts": {},
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Syed-Umair/logger.git"
+  },
+  "author": {
+    "name": "Syed Umair",
+    "email": "ideasyed@protonmail.com",
+    "url": "https://syed-umair.github.io"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Syed-Umair/logger/issues"
+  },
+  "homepage": "https://github.com/Syed-Umair/logger#readme",
+  "scripts": {
+    "test": "jest --forceExit"
+  },
+  "files": [
+    "index.js"
+  ],
+  "engines": {
+    "node": ">=8"
+  },
   "keywords": [
     "Logger",
     "electron"
   ],
-  "repository": "https://github.com/Syed-Umair/logger",
-  "author": {
-    "name": "syed_umair",
-    "email": "ideasyed@protonmail.com",
-    "url": "syedumair.ml"
-  },
-  "license": "MIT",
   "dependencies": {
-    "bugsnag" : "2.4.3",
-    "fs-extra": "7.0.0",
-    "jszip": "3.1.5",
+    "@bugsnag/js": "5.1.0",
     "app-root-dir": "1.0.2",
+    "fs-extra": "7.0.1",
+    "jszip": "3.1.5",
     "winston": "3.1.0"
+  },
+  "devDependencies": {
+    "jest": "23.6.0"
   }
 }
