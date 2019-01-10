@@ -14,7 +14,7 @@ let appRootDirectory = require('app-root-dir');
 let settings;
 let ipc;
 let instanceList = new Map();
-const SETTING_LIST = ['FILE_LOGGING', 'LOGS_EXPIRY', 'ENABLE_BUGSNAG'];
+const SETTING_LIST = ['FILE_LOGGING', 'LOGS_EXPIRY', 'ENABLE_BUGSNAG', 'SESSION'];
 const APP_NAME = getAppName() || 'electron-app';
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
 const CUSTOMLEVELS = {
@@ -36,7 +36,7 @@ if (process.type === 'browser') {
     LOGS_EXPIRY: 7,
     ENABLE_BUGSNAG: false
   };
-  var { BrowserWindow, ipcMain } = require('electron');
+  var { webContents, ipcMain } = require('electron');
   ipc = ipcMain;
   ipc.on('updateSettings', mainSettingsHandler);
 } else {
@@ -103,7 +103,7 @@ function mainSettingsHandler() {
       settings[setting.name] = setting.value;
       if (setting.push) {
         delete setting.push;
-        BrowserWindow.getAllWindows().forEach(win => {
+        webContents.getAllWebContents().forEach(win => {
           win.webContents.send('updateSettings', setting);
         });
       }
@@ -118,9 +118,12 @@ function rendererSettingsHandler() {
   for (let setting of arguments) {
     if (
       setting.hasOwnProperty('name') &&
-      SETTING_LIST.indexOf(setting.name) != -1
+      SETTING_LIST.indexOf(setting.name) !== -1
     ) {
       settings[setting.name] = setting.value;
+      if (setting.name === 'SESSION') {
+        updateSession(instanceList.get(process.pid), setting.value);
+      }
       if (setting.push) {
         ipc.send('updateSettings', setting);
       }
@@ -164,7 +167,7 @@ const logFormat = winston.format.printf((info) => {
  * @param  {String} fileName
  * @return {Object} config
  */
-function getConfig(type, isWebview, fileName) {
+function getConfig(type, isWebview, fileName, sessionFolder) {
   let filename = null;
   let config = {
     filename: null
@@ -186,7 +189,7 @@ function getConfig(type, isWebview, fileName) {
   if (fileName) {
     filename = filename.replace(/^/, `${fileName}-`);
   }
-  let sessionFolder = settings.SESSION;
+  // let sessionFolder = settings.SESSION;
   config.filename = path.join(LOGSDIR, sessionFolder, filename);
   return config;
 }
@@ -357,15 +360,39 @@ async function pruneOldLogs() {
   }
 }
 
+function updateSession(context, session) {
+  context.logAPI
+    .clear()
+    .add(new winston.transports.File(getConfig(context.type, context.isWebview, context.fileName, session)))
+    .add(new winston.transports.Console());
+}
+
+function checkSessionAndUpdate(context) {
+  if(typeof settings.SESSION === 'string') {
+    let sessionDate = new Date(settings.SESSION.split("_")[0]);
+    let now = Date.now();
+    if ((now - sessionDate) >= 24*60*60*1000) {
+      let newSession = createNewSession();
+      updateSession(context, newSession);
+      handleSetting({
+        name: 'SESSION',
+        value: newSession,
+        push: true
+      });
+    }
+  }
+}
+
 /**
  * Logs the content
  * @param {Object} context
  * @param {String} content
  * @param {String} level
  */
-function logIt(context, content, level) {
+async function logIt(context, content, level) {
   try {
     if (settings.FILE_LOGGING) {
+      checkSessionAndUpdate(context);
       if (!fs.existsSync(LOGSDIR)) {
         fs.mkdirSync(LOGSDIR);
       }
@@ -440,11 +467,13 @@ class Logger {
         logFormat
       ),
       transports: [
-        new winston.transports.File(getConfig(type, isWebview, fileName)),
+        new winston.transports.File(getConfig(type, isWebview, fileName, settings.SESSION)),
         new winston.transports.Console()
       ]
     });
     this.isWebview = isWebview;
+    this.fileName = fileName;
+    this.type = type;
     if (bugsnagKey && !isWebview) {
       settings.ENABLE_BUGSNAG = true;
       if (type === 'browser') {
