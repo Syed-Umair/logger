@@ -451,7 +451,7 @@ class Logger {
       }
       return console;
     }
-    if (instanceList.has(process.pid)) {
+    if (!isWebview && instanceList.has(process.pid)) {
       return instanceList.get(process.pid);
     }
     pruneOldLogs();
