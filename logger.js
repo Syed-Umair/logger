@@ -3,14 +3,14 @@
  * Each logger object automatically detects the process type,
  * creates seperate log based on its process type.
  */
-let winston = require('winston');
-let bugsnag = require('bugsnag');
-let { shell } = require('electron');
-let fs = require('fs-extra');
-let util = require('util');
-let path = require('path');
-let jsZip = require('jszip');
-let appRootDirectory = require('app-root-dir');
+const winston = require('winston');
+const bugsnag = require('bugsnag');
+const { shell } = require('electron');
+const fs = require('fs-extra');
+const util = require('util');
+const path = require('path');
+const jsZip = require('jszip');
+const appRootDirectory = require('app-root-dir');
 let settings;
 let ipc;
 let instanceList = new Map();
@@ -101,10 +101,15 @@ function mainSettingsHandler() {
     ) {
       global.loggerSettings[setting.name] = setting.value;
       settings[setting.name] = setting.value;
+      if (setting.name === 'SESSION') {
+        instanceList.forEach((context) => {
+          updateSession(context, setting.value);
+        });
+      }
       if (setting.push) {
         delete setting.push;
-        webContents.getAllWebContents().forEach(win => {
-          win.webContents.send('updateSettings', setting);
+        webContents.getAllWebContents().forEach(webContent => {
+          webContent.send('updateSettings', setting);
         });
       }
     }
@@ -122,7 +127,9 @@ function rendererSettingsHandler() {
     ) {
       settings[setting.name] = setting.value;
       if (setting.name === 'SESSION') {
-        updateSession(instanceList.get(process.pid), setting.value);
+        instanceList.forEach((context) => {
+          updateSession(context, setting.value);
+        });
       }
       if (setting.push) {
         ipc.send('updateSettings', setting);
@@ -363,8 +370,10 @@ async function pruneOldLogs() {
 function updateSession(context, session) {
   context.logAPI
     .clear()
-    .add(new winston.transports.File(getConfig(context.type, context.isWebview, context.fileName, session)))
-    .add(new winston.transports.Console());
+    .add(new winston.transports.File(getConfig(context.type, context.isWebview, context.fileName, session)));
+  if (context.isWebview) {
+    context.logAPI.add(new winston.transports.Console());
+  }
 }
 
 function checkSessionAndUpdate(context) {
@@ -373,7 +382,6 @@ function checkSessionAndUpdate(context) {
     let now = Date.now();
     if ((now - sessionDate) >= 24*60*60*1000) {
       let newSession = createNewSession();
-      updateSession(context, newSession);
       handleSetting({
         name: 'SESSION',
         value: newSession,
@@ -392,7 +400,9 @@ function checkSessionAndUpdate(context) {
 async function logIt(context, content, level) {
   try {
     if (settings.FILE_LOGGING) {
-      checkSessionAndUpdate(context);
+      if (process.type === 'browser') {
+        checkSessionAndUpdate(context);
+      }
       if (!fs.existsSync(LOGSDIR)) {
         fs.mkdirSync(LOGSDIR);
       }
@@ -451,12 +461,19 @@ class Logger {
       }
       return console;
     }
-    if (!isWebview && instanceList.has(process.pid)) {
-      return instanceList.get(process.pid);
-    }
-    pruneOldLogs();
     if (fileName) {
       fileName = parseDomain(fileName);
+    }
+    if (!isWebview && instanceList.has(fileName)) {
+      return instanceList.get(fileName);
+    }
+    pruneOldLogs();
+    let transports = [
+      new winston.transports.File(getConfig(type, isWebview, fileName, settings.SESSION)),
+      new winston.transports.Console()
+    ];
+    if (isWebview) {
+      transports.pop();
     }
     this.logAPI = winston.createLogger({
       level: 'debug',
@@ -466,10 +483,7 @@ class Logger {
         winston.format.prettyPrint(),
         logFormat
       ),
-      transports: [
-        new winston.transports.File(getConfig(type, isWebview, fileName, settings.SESSION)),
-        new winston.transports.Console()
-      ]
+      transports
     });
     this.isWebview = isWebview;
     this.fileName = fileName;
@@ -488,7 +502,7 @@ class Logger {
         console.error(e);
       }
     }
-    instanceList.set(process.pid, this);
+    instanceList.set(fileName, this);
   }
   debug(...content) {
     logIt(this, content, 'debug');
