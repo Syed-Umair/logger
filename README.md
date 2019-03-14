@@ -67,7 +67,7 @@ logger = new logger({
 
 ### Methods
 
-##### setLogExpiry(logExpiry):
+##### setLogExpiry(days):
 ```sh
 logger.setLogExpiry(10);
 // Deletes logs older than 10 days
