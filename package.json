@@ -3,7 +3,10 @@
   "version": "1.2.8",
   "description": "Logger For Electron Apps",
   "main": "logger.js",
-  "scripts": {},
+  "scripts": {
+    "snyk-protect": "snyk protect",
+    "prepublish": "npm run snyk-protect"
+  },
   "keywords": [
     "Logger",
     "electron"
@@ -21,6 +24,8 @@
     "fs-extra": "latest",
     "jszip": "latest",
     "app-root-dir": "latest",
-    "winston": "latest"
-  }
+    "winston": "latest",
+    "snyk": "^1.192.3"
+  },
+  "snyk": true
 }
