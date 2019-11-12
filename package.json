@@ -8,7 +8,10 @@
     "Logger",
     "electron"
   ],
-  "repository": "https://github.com/Syed-Umair/logger",
+  "repository" : {
+    "type" : "git",
+    "url": "ssh://git@github.com/syed-umair/logger.git"
+  },
   "author": {
     "name": "syed_umair",
     "email": "ideasyed@protonmail.com",
