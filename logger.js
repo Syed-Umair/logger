@@ -8,7 +8,7 @@ const { shell } = require('electron');
 const fs = require('fs-extra');
 const util = require('util');
 const path = require('path');
-const jsZip = require('jszip');
+const archiver = require('archiver');
 const appRootDirectory = require('app-root-dir');
 let settings;
 let ipc;
@@ -311,30 +311,22 @@ async function getLogCreationTime(file) {
  */
 async function getRecentLogs() {
   try {
-    let zip = new jsZip();
+    let zip = archiver('zip', {
+        zlib: { level: 9 }
+    });
     let zipName = `logs-${Date.now()}.zip`;
     let sessions = await getContents(LOGSDIR);
+    let output = fs.createWriteStream(path.join(LOGSDIR, zipName));
+    zip.pipe(output);
     for (let session of sessions) {
       if ((await getLogCreationTime(session)) >= getLogExpiry()) {
-        let logs = await getContents(path.join(LOGSDIR, session));
-        for (let log of logs) {
-          zip.file(
-            `${session}/${log}`,
-            await fs.readFile(path.join(LOGSDIR, session, log))
-          );
-        }
+        zip.directory(path.join(LOGSDIR, session), session);
       }
     }
+    await zip.finalize();
     return new Promise(resolve => {
-      zip
-        .generateNodeStream({
-          type: 'nodebuffer',
-          streamFiles: true,
-          compression: 'DEFLATE'
-        })
-        .pipe(fs.createWriteStream(path.join(LOGSDIR, zipName)))
-        .on('finish', () => {
-          resolve(path.join(LOGSDIR, zipName));
+        output.on('finish', () => {
+            resolve(path.join(LOGSDIR, zipName));
         });
     });
   } catch (e) {
