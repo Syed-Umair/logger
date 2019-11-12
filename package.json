@@ -12,12 +12,11 @@
   "author": {
     "name": "syed_umair",
     "email": "ideasyed@protonmail.com",
-    "url": "syedumair.ml"
+    "url": "syed-umair.github.io"
   },
   "license": "MIT",
   "dependencies": {
-    "bugsnag" : "2.4.3",
-    "fs-extra": "7.0.0",
+    "fs-extra": "8.1.0",
     "jszip": "3.1.5",
     "app-root-dir": "1.0.2",
     "winston": "3.1.0"
