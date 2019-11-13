@@ -10,9 +10,11 @@ const util = require('util');
 const path = require('path');
 const archiver = require('archiver');
 const appRootDirectory = require('app-root-dir');
+const EventEmitter = require('events');
 let settings;
 let ipc;
 let instanceList = new Map();
+let loggerEvents = new EventEmitter();
 const SETTING_LIST = ['FILE_LOGGING', 'LOGS_EXPIRY', 'SESSION'];
 const APP_NAME = getAppName() || 'electron-app';
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
@@ -123,6 +125,7 @@ function rendererSettingsHandler() {
     ) {
       settings[setting.name] = setting.value;
       if (setting.name === 'SESSION') {
+        loggerEvents.emit('newLoggerSession', setting.value.folder);
         instanceList.forEach((context) => {
           updateSession(context, setting.value);
         });
@@ -518,6 +521,11 @@ class Logger {
         push: true
       });
       return `Logs Expiry set to ${logExpiry}`;
+    }
+  }
+  onNewSession(cb) {
+    if (typeof cb === "function") {
+        loggerEvents.on('newLoggerSession', cb);
     }
   }
 }
