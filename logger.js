@@ -50,7 +50,7 @@ settings = getSettings();
 
 /**
  * Returns loggerSettings
- * @return {object} loggerSettings
+ * @returns {object} loggerSettings
  */
 function getSettings() {
   if (settings) return settings;
@@ -65,7 +65,7 @@ function getSettings() {
 
 /**
  * Returns default Options for Logger Configuration
- * @return {object} Logger Instance Configuration
+ * @returns {object} Logger Instance Configuration
  */
 function getDefaultOptions() {
   let options = {
@@ -82,7 +82,7 @@ function getDefaultOptions() {
 
 /**
  * Generates UniqueId using Math.Random
- * @return {string} unique string
+ * @returns {string} unique string
  */
 function getUniqueId() {
   return Math.floor(Math.random() * 10000000000 + 1).toString();
@@ -158,7 +158,8 @@ function getTimeStamp() {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false
+    hour12: false,
+    timeZone: 'UTC'
   })}.${now.getMilliseconds()}`;
 }
 
@@ -171,7 +172,7 @@ const logFormat = winston.format.printf((info) => {
  * @param  {String} type
  * @param  {Boolean} isWebview
  * @param  {String} fileName
- * @return {Object} config
+ * @returns {Object} config
  */
 function getConfig(type, isWebview, fileName, sessionFolder) {
   let filename = null;
@@ -202,7 +203,7 @@ function getConfig(type, isWebview, fileName, sessionFolder) {
 
 /**
  * appdata location based on platform
- * @return {String} path
+ * @returns {String} path
  */
 function getAppDataLoc() {
   if (/^win/.test(process.platform))
@@ -212,7 +213,7 @@ function getAppDataLoc() {
 
 /**
  * returns the application name from the parent package.json
- * @return {String} AppName
+ * @returns {String} AppName
  */
 function getAppName() {
   try {
@@ -230,19 +231,23 @@ function getAppName() {
 
 /**
  * creates session timestamp
- * @return {String} timestamp
+ * @returns {String} timestamp
  */
 function createNewSession() {
   let date = new Date();
   let datePart = `${date.toLocaleString('en-US', {
-    day: '2-digit'
+    day: '2-digit',
+    timeZone: 'UTC'
   })}-${date.toLocaleString('en-US', {
-    month: 'short'
+    month: 'short',
+    timeZone: 'UTC'
   })}-${date.toLocaleString('en-US', {
-    year: 'numeric'
+    year: 'numeric',
+    timeZone: 'UTC'
   })}`;
   let hourPart = `${date.toLocaleString('en-US', {
     hour: '2-digit',
+    timeZone: 'UTC',
     hour12: false
   })}-00`;
   let session = path.join(datePart, hourPart);
@@ -254,7 +259,7 @@ function createNewSession() {
 
 /**
  * Log expiry time in milliseconds
- * @return {Number} expiryTime
+ * @returns {Number} expiryTime
  */
 function getLogExpiry() {
   return new Date().getTime() - 24 * 60 * 60 * 1000 * settings.LOGS_EXPIRY;
@@ -263,7 +268,7 @@ function getLogExpiry() {
 /**
  * Converts input content to String using util.inspect
  * @param  {Array} content
- * @return {String} data
+ * @returns {String} data
  */
 function getMessage(content) {
   let data = '';
@@ -277,16 +282,19 @@ function getMessage(content) {
  * Finds all log files in the @LOGSDIR and returns log files array
  * @param {String} path
  * @param {Boolean} includeZip
- * @return {Array} files
+ * @returns {Promise<Array<Object>>} files
  */
 async function getContents(path, includeZip = false) {
   try {
-    let contents = await fs.readdir(path);
+    let contents = await fs.readdir(path, {
+        withFileTypes: true
+    });
     return contents.filter(function(file) {
+      let name = file.name;
       if (includeZip) {
-        return !/^\./.test(file);
+        return !/^\./.test(name);
       } else {
-        return !(/^\./.test(file) || /.zip$/.test(file));
+        return !(/^\./.test(name) || /.zip$/.test(name));
       }
     });
   } catch (e) {
@@ -297,11 +305,11 @@ async function getContents(path, includeZip = false) {
 /**
  * Finds file creation time and returns file creation time in ms
  * @param  {String} file
- * @return {Number} creationTime
+ * @returns {Number} creationTime
  */
 async function getLogCreationTime(file) {
   try {
-    let stat = await fs.stat(path.join(LOGSDIR, file));
+    let stat = await fs.stat(file);
     return stat.birthtime.getTime();
   } catch (e) {
     console.error(e);
@@ -309,44 +317,59 @@ async function getLogCreationTime(file) {
 }
 
 /**
- * Archives recent logs and returns zip path
- * @return {Promise} resolves Zip file location
+ * Create Archive of folderPath
+ * @param {String} folderPath
+ * @returns {promise<String>} resolves zip file location
  */
-async function getRecentLogs() {
-  try {
-    let zip = archiver('zip', {
-        zlib: { level: 9 }
-    });
-    let zipName = `logs-${Date.now()}.zip`;
-    let sessions = await getContents(LOGSDIR);
-    let output = fs.createWriteStream(path.join(LOGSDIR, zipName));
-    zip.pipe(output);
-    for (let session of sessions) {
-      if ((await getLogCreationTime(session)) >= getLogExpiry()) {
-        zip.directory(path.join(LOGSDIR, session), session);
-      }
-    }
-    await zip.finalize();
-    return new Promise(resolve => {
-        output.on('finish', () => {
-            resolve(path.join(LOGSDIR, zipName));
+async function createArchive(folderPath, zipName = `logs-${Date.now()}.zip`) {
+    try {
+        let zip = archiver('zip', {
+            zlib: { level: 9 }
         });
-    });
-  } catch (e) {
-    console.error(e);
-  }
+        let files = await getContents(folderPath);
+        let output = fs.createWriteStream(path.join(folderPath, zipName));
+        zip.pipe(output);
+        for (let fileRef of files) {
+          let fileName = fileRef.name;
+          if ((await getLogCreationTime(path.join(folderPath, fileName))) >= getLogExpiry()) {
+              if (fileRef.isDirectory()) {
+                zip.directory(path.join(folderPath, fileName), fileName);
+              } else if (fileRef.isFile()) {
+                zip.file(path.join(folderPath, fileName), {
+                    name: fileName
+                });
+              }
+          }
+        }
+        await zip.finalize();
+        return new Promise(resolve => {
+            output.on('finish', () => {
+                resolve(path.join(folderPath, zipName));
+            });
+        });
+      } catch (e) {
+        console.error(e);
+      }
+}
+
+/**
+ * Archives recent logs and returns zip path
+ * @returns {Promise} resolves Zip file location
+ */
+function getRecentLogs() {
+    return createArchive(LOGSDIR);
 }
 
 /**
  * Deletes logs Older than @LOGS_EXPIRY
- * @return {Promise} resolves older logs cleared message
+ * @returns {Promise} resolves older logs cleared message
  */
 async function pruneOldLogs() {
   try {
     let sessions = await getContents(LOGSDIR, true);
     for (let session of sessions) {
-      if ((await getLogCreationTime(session)) < getLogExpiry()) {
-        await fs.remove(path.join(LOGSDIR, session));
+      if ((await getLogCreationTime(path.join(LOGSDIR, session.name))) < getLogExpiry()) {
+        await fs.remove(path.join(LOGSDIR, session.name));
       }
     }
     return `Logs older than ${settings.LOGS_EXPIRY} day(s) Cleared`;
@@ -526,6 +549,15 @@ class Logger {
   onNewSession(cb) {
     if (typeof cb === "function") {
         loggerEvents.on('newLoggerSession', cb);
+    } else {
+        throw new Error('Expected callback to be of type function');
+    }
+  }
+  createArchive(folderPath, zipName) {
+    if(typeof folderPath === 'string' && typeof folderPath === 'string') {
+        return createArchive(folderPath, zipName);
+    } else {
+        throw new Error('Expected parameters to be of type string');
     }
   }
 }
