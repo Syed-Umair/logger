@@ -123,12 +123,12 @@ function rendererSettingsHandler() {
       setting.hasOwnProperty('name') &&
       SETTING_LIST.indexOf(setting.name) !== -1
     ) {
-      settings[setting.name] = setting.value;
       if (setting.name === 'SESSION') {
-        loggerEvents.emit('newLoggerSession', setting.value.folder);
+        loggerEvents.emit('newLoggerSession', setting.value.folder, settings['SESSION'].folder);
         instanceList.forEach((context) => {
           updateSession(context, setting.value);
         });
+        settings[setting.name] = setting.value;
       }
       if (setting.push) {
         ipc.send('updateSettings', setting);
