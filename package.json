@@ -1,6 +1,6 @@
 {
   "name": "@syed-umair/logger-electron",
-  "version": "1.6.5",
+  "version": "1.6.6",
   "description": "Logger For Electron Apps",
   "main": "logger.js",
   "scripts": {},

@@ -19,10 +19,10 @@ const SETTING_LIST = ['FILE_LOGGING', 'LOGS_EXPIRY', 'SESSION'];
 const APP_NAME = getAppName() || 'electron-app';
 const LOGSDIR = path.join(getAppDataLoc(), `${APP_NAME}-logs`);
 const CUSTOMLEVELS = {
-  error: 0,
-  warn: 1,
-  info: 2,
-  debug: 3
+    error: 0,
+    warn: 1,
+    info: 2,
+    debug: 3
 };
 
 /**
@@ -30,17 +30,17 @@ const CUSTOMLEVELS = {
  * Setting IPC handlers to recieve settings
  */
 if (process.type === 'browser') {
-  global.loggerSettings = {
-    FILE_LOGGING: true,
-    SESSION: createNewSession(),
-    LOGS_EXPIRY: 7
-  };
-  var { webContents, ipcMain } = require('electron');
-  ipc = ipcMain;
-  ipc.on('updateSettings', mainSettingsHandler);
+    global.loggerSettings = {
+        FILE_LOGGING: true,
+        SESSION: createNewSession(),
+        LOGS_EXPIRY: 7
+    };
+    var { webContents, ipcMain } = require('electron');
+    ipc = ipcMain;
+    ipc.on('updateSettings', mainSettingsHandler);
 } else {
-  ipc = require('electron').ipcRenderer;
-  ipc.on('updateSettings', rendererSettingsHandler);
+    ipc = require('electron').ipcRenderer;
+    ipc.on('updateSettings', rendererSettingsHandler);
 }
 
 /**
@@ -53,14 +53,14 @@ settings = getSettings();
  * @returns {object} loggerSettings
  */
 function getSettings() {
-  if (settings) return settings;
+    if (settings) return settings;
 
-  if (process.type === 'browser') {
-    return global.loggerSettings;
-  } else {
-    let { remote } = require('electron');
-    return remote.getGlobal('loggerSettings');
-  }
+    if (process.type === 'browser') {
+        return Object.assign({}, global.loggerSettings);;
+    } else {
+        let { remote } = require('electron');
+        return Object.assign({}, remote.getGlobal('loggerSettings'));
+    }
 }
 
 /**
@@ -68,16 +68,16 @@ function getSettings() {
  * @returns {object} Logger Instance Configuration
  */
 function getDefaultOptions() {
-  let options = {
-    fileName: '',
-    isWebview: false,
-    type: process.type
-  };
-  //calculate name based on main-file-location
-  options.fileName = process.mainModule
-    ? path.basename(process.mainModule.filename)
-    : getUniqueId();
-  return options;
+    let options = {
+        fileName: '',
+        isWebview: false,
+        type: process.type
+    };
+    //calculate name based on main-file-location
+    options.fileName = process.mainModule
+        ? path.basename(process.mainModule.filename)
+        : getUniqueId();
+    return options;
 }
 
 /**
@@ -85,56 +85,56 @@ function getDefaultOptions() {
  * @returns {string} unique string
  */
 function getUniqueId() {
-  return Math.floor(Math.random() * 10000000000 + 1).toString();
+    return Math.floor(Math.random() * 10000000000 + 1).toString();
 }
 
 /**
  * Handles Update Setting Request in main and push to all renderers
  */
 function mainSettingsHandler() {
-  for (let setting of arguments) {
-    if (
-      setting.hasOwnProperty('name') &&
-      SETTING_LIST.indexOf(setting.name) != -1
-    ) {
-      global.loggerSettings[setting.name] = setting.value;
-      settings[setting.name] = setting.value;
-      if (setting.name === 'SESSION') {
-        instanceList.forEach((context) => {
-          updateSession(context, setting.value);
-        });
-      }
-      if (setting.push) {
-        delete setting.push;
-        webContents.getAllWebContents().forEach(webContent => {
-          webContent.send('updateSettings', setting);
-        });
-      }
+    for (let setting of arguments) {
+        if (
+            setting.hasOwnProperty('name') &&
+            SETTING_LIST.indexOf(setting.name) != -1
+        ) {
+            global.loggerSettings[setting.name] = setting.value;
+            settings[setting.name] = setting.value;
+            if (setting.name === 'SESSION') {
+                instanceList.forEach((context) => {
+                    updateSession(context, setting.value);
+                });
+            }
+            if (setting.push) {
+                delete setting.push;
+                webContents.getAllWebContents().forEach(webContent => {
+                    webContent.send('updateSettings', setting);
+                });
+            }
+        }
     }
-  }
 }
 
 /**
  * Handles Update Setting Request in renderer and push to request to main
  */
 function rendererSettingsHandler() {
-  for (let setting of arguments) {
-    if (
-      setting.hasOwnProperty('name') &&
-      SETTING_LIST.indexOf(setting.name) !== -1
-    ) {
-      if (setting.name === 'SESSION') {
-        loggerEvents.emit('newLoggerSession', setting.value.folder, settings['SESSION'].folder);
-        instanceList.forEach((context) => {
-          updateSession(context, setting.value);
-        });
-        settings[setting.name] = setting.value;
-      }
-      if (setting.push) {
-        ipc.send('updateSettings', setting);
-      }
+    for (let setting of arguments) {
+        if (
+            setting.hasOwnProperty('name') &&
+            SETTING_LIST.indexOf(setting.name) !== -1
+        ) {
+            if (setting.name === 'SESSION') {
+                loggerEvents.emit('newLoggerSession', setting.value.folder, settings['SESSION'].folder);
+                instanceList.forEach((context) => {
+                    updateSession(context, setting.value);
+                });
+            }
+            settings[setting.name] = setting.value;
+            if (setting.push) {
+                ipc.send('updateSettings', setting);
+            }
+        }
     }
-  }
 }
 
 /**
@@ -142,29 +142,29 @@ function rendererSettingsHandler() {
  * @param {Object} setting
  */
 function handleSetting(setting) {
-  if (process.type === 'browser') {
-    mainSettingsHandler(setting);
-  } else {
-    rendererSettingsHandler(setting);
-  }
+    if (process.type === 'browser') {
+        mainSettingsHandler(setting);
+    } else {
+        rendererSettingsHandler(setting);
+    }
 }
 
 function getTimeStamp() {
-  let now = new Date();
-  return `${now.toLocaleString('en-US', {
-    day: '2-digit',
-    month: '2-digit',
-    year: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: 'UTC'
-  })}.${now.getMilliseconds()}`;
+    let now = new Date();
+    return `${now.toLocaleString('en-US', {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: 'UTC'
+    })}.${now.getMilliseconds()}`;
 }
 
 const logFormat = winston.format.printf((info) => {
-  return `${getTimeStamp()}::${info.level}::${info.message}`;
+    return `${getTimeStamp()}::${info.level}::${info.message}`;
 });
 
 /**
@@ -175,30 +175,30 @@ const logFormat = winston.format.printf((info) => {
  * @returns {Object} config
  */
 function getConfig(type, isWebview, fileName, sessionFolder) {
-  let filename = null;
-  let config = {
-    filename: null
-  };
-  switch (type) {
-    case 'renderer':
-      if (isWebview) {
-        filename = `webview.log`;
-      } else {
-        filename = `renderer.log`;
-      }
-      break;
-    case 'browser':
-      filename = `main.log`;
-      break;
-    default:
-      filename = `default.log`;
-  }
-  if (fileName) {
-    filename = filename.replace(/^/, `${fileName}-`);
-  }
-  // let sessionFolder = settings.SESSION;
-  config.filename = path.join(LOGSDIR, sessionFolder, filename);
-  return config;
+    let filename = null;
+    let config = {
+        filename: null
+    };
+    switch (type) {
+        case 'renderer':
+            if (isWebview) {
+                filename = `webview.log`;
+            } else {
+                filename = `renderer.log`;
+            }
+            break;
+        case 'browser':
+            filename = `main.log`;
+            break;
+        default:
+            filename = `default.log`;
+    }
+    if (fileName) {
+        filename = filename.replace(/^/, `${fileName}-${Date.now()}-`);
+    }
+    // let sessionFolder = settings.SESSION;
+    config.filename = path.join(LOGSDIR, sessionFolder, filename);
+    return config;
 }
 
 /**
@@ -206,9 +206,9 @@ function getConfig(type, isWebview, fileName, sessionFolder) {
  * @returns {String} path
  */
 function getAppDataLoc() {
-  if (/^win/.test(process.platform))
-    return path.join(process.env.USERPROFILE, 'AppData', 'local');
-  else return path.join(process.env.HOME, 'Library', 'Application Support');
+    if (/^win/.test(process.platform))
+        return path.join(process.env.USERPROFILE, 'AppData', 'local');
+    else return path.join(process.env.HOME, 'Library', 'Application Support');
 }
 
 /**
@@ -216,17 +216,17 @@ function getAppDataLoc() {
  * @returns {String} AppName
  */
 function getAppName() {
-  try {
-    let manifest = require(`${path.join(
-      appRootDirectory.get(),
-      'package.json'
-    )}`);
-    if (manifest) {
-      return manifest.name;
+    try {
+        let manifest = require(`${path.join(
+            appRootDirectory.get(),
+            'package.json'
+        )}`);
+        if (manifest) {
+            return manifest.name;
+        }
+    } catch (e) {
+        console.error(e);
     }
-  } catch (e) {
-    console.error(e);
-  }
 }
 
 /**
@@ -234,27 +234,27 @@ function getAppName() {
  * @returns {String} timestamp
  */
 function createNewSession() {
-  let date = new Date();
-  let datePart = `${date.toLocaleString('en-US', {
-    day: '2-digit',
-    timeZone: 'UTC'
-  })}-${date.toLocaleString('en-US', {
-    month: 'short',
-    timeZone: 'UTC'
-  })}-${date.toLocaleString('en-US', {
-    year: 'numeric',
-    timeZone: 'UTC'
-  })}`;
-  let hourPart = `${date.toLocaleString('en-US', {
-    hour: '2-digit',
-    timeZone: 'UTC',
-    hour12: false
-  })}-00`;
-  let session = path.join(datePart, hourPart);
-  return {
-      folder: session,
-      time: date.getTime()
-  };
+    let date = new Date();
+    let datePart = `${date.toLocaleString('en-US', {
+        day: '2-digit',
+        timeZone: 'UTC'
+    })}-${date.toLocaleString('en-US', {
+        month: 'short',
+        timeZone: 'UTC'
+    })}-${date.toLocaleString('en-US', {
+        year: 'numeric',
+        timeZone: 'UTC'
+    })}`;
+    let hourPart = `${date.toLocaleString('en-US', {
+        hour: '2-digit',
+        timeZone: 'UTC',
+        hour12: false
+    })}-00`;
+    let session = path.join(datePart, hourPart);
+    return {
+        folder: session,
+        time: date.getTime()
+    };
 }
 
 /**
@@ -262,7 +262,7 @@ function createNewSession() {
  * @returns {Number} expiryTime
  */
 function getLogExpiry() {
-  return new Date().getTime() - 24 * 60 * 60 * 1000 * settings.LOGS_EXPIRY;
+    return new Date().getTime() - 24 * 60 * 60 * 1000 * settings.LOGS_EXPIRY;
 }
 
 /**
@@ -271,11 +271,11 @@ function getLogExpiry() {
  * @returns {String} data
  */
 function getMessage(content) {
-  let data = '';
-  for (let value of content) {
-    data += util.inspect(value) + '\n\t';
-  }
-  return data;
+    let data = '';
+    for (let value of content) {
+        data += util.inspect(value) + '\n\t';
+    }
+    return data;
 }
 
 /**
@@ -285,21 +285,21 @@ function getMessage(content) {
  * @returns {Promise<Array<Object>>} files
  */
 async function getContents(path, includeZip = false) {
-  try {
-    let contents = await fs.readdir(path, {
-        withFileTypes: true
-    });
-    return contents.filter(function(file) {
-      let name = file.name;
-      if (includeZip) {
-        return !/^\./.test(name);
-      } else {
-        return !(/^\./.test(name) || /.zip$/.test(name));
-      }
-    });
-  } catch (e) {
-    console.error(e);
-  }
+    try {
+        let contents = await fs.readdir(path, {
+            withFileTypes: true
+        });
+        return contents.filter(function (file) {
+            let name = file.name;
+            if (includeZip) {
+                return !/^\./.test(name);
+            } else {
+                return !(/^\./.test(name) || /.zip$/.test(name));
+            }
+        });
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 /**
@@ -308,12 +308,12 @@ async function getContents(path, includeZip = false) {
  * @returns {Number} creationTime
  */
 async function getLogCreationTime(file) {
-  try {
-    let stat = await fs.stat(file);
-    return stat.birthtime.getTime();
-  } catch (e) {
-    console.error(e);
-  }
+    try {
+        let stat = await fs.stat(file);
+        return stat.birthtime.getTime();
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 /**
@@ -330,16 +330,16 @@ async function createArchive(folderPath, zipName = `logs-${Date.now()}.zip`) {
         let output = fs.createWriteStream(path.join(folderPath, zipName));
         zip.pipe(output);
         for (let fileRef of files) {
-          let fileName = fileRef.name;
-          if ((await getLogCreationTime(path.join(folderPath, fileName))) >= getLogExpiry()) {
-              if (fileRef.isDirectory()) {
-                zip.directory(path.join(folderPath, fileName), fileName);
-              } else if (fileRef.isFile()) {
-                zip.file(path.join(folderPath, fileName), {
-                    name: fileName
-                });
-              }
-          }
+            let fileName = fileRef.name;
+            if ((await getLogCreationTime(path.join(folderPath, fileName))) >= getLogExpiry()) {
+                if (fileRef.isDirectory()) {
+                    zip.directory(path.join(folderPath, fileName), fileName);
+                } else if (fileRef.isFile()) {
+                    zip.file(path.join(folderPath, fileName), {
+                        name: fileName
+                    });
+                }
+            }
         }
         await zip.finalize();
         return new Promise(resolve => {
@@ -347,9 +347,9 @@ async function createArchive(folderPath, zipName = `logs-${Date.now()}.zip`) {
                 resolve(path.join(folderPath, zipName));
             });
         });
-      } catch (e) {
+    } catch (e) {
         console.error(e);
-      }
+    }
 }
 
 /**
@@ -365,42 +365,44 @@ function getRecentLogs() {
  * @returns {Promise} resolves older logs cleared message
  */
 async function pruneOldLogs() {
-  try {
-    let sessions = await getContents(LOGSDIR, true);
-    for (let session of sessions) {
-      if ((await getLogCreationTime(path.join(LOGSDIR, session.name))) < getLogExpiry()) {
-        await fs.remove(path.join(LOGSDIR, session.name));
-      }
+    try {
+        let sessions = await getContents(LOGSDIR, true);
+        for (let session of sessions) {
+            if ((await getLogCreationTime(path.join(LOGSDIR, session.name))) < getLogExpiry()) {
+                await fs.remove(path.join(LOGSDIR, session.name));
+            }
+        }
+        return `Logs older than ${settings.LOGS_EXPIRY} day(s) Cleared`;
+    } catch (e) {
+        console.error(e);
     }
-    return `Logs older than ${settings.LOGS_EXPIRY} day(s) Cleared`;
-  } catch (e) {
-    console.error(e);
-  }
 }
 
 function updateSession(context, session) {
-  context.logAPI
-    .clear()
-    .add(new winston.transports.File(getConfig(context.type, context.isWebview, context.fileName, session.folder)));
-  if (context.isWebview) {
-    context.logAPI.add(new winston.transports.Console());
-  }
+    context.logAPI
+        .clear()
+        .add(new winston.transports.File(getConfig(context.type, context.isWebview, context.fileName, session.folder)));
+    if (context.isWebview) {
+        context.logAPI.add(new winston.transports.Console());
+    }
 }
 
 function checkSessionAndUpdate(context) {
-  if(typeof settings.SESSION === 'object' && settings.SESSION.time && settings.SESSION.folder) {
-    let sessionDate = new Date(settings.SESSION.time);
-    let now = new Date();
-    let hourDifference = now.getHours() - sessionDate.getHours();
-    if (hourDifference >= 1) {
-      let newSession = createNewSession();
-      handleSetting({
-        name: 'SESSION',
-        value: newSession,
-        push: true
-      });
+    if (typeof settings.SESSION === 'object' && settings.SESSION.time && settings.SESSION.folder) {
+        let sessionDate = new Date(settings.SESSION.time);
+        let now = new Date();
+        let hourDifference = now.getHours() - sessionDate.getHours();
+        let dayDifference = now.getDate() - sessionDate.getDate();
+        let monthDifference = now.getMonth() - sessionDate.getMonth();
+        if (hourDifference >= 1 || dayDifference >= 1 || monthDifference >= 1) {
+            let newSession = createNewSession();
+            handleSetting({
+                name: 'SESSION',
+                value: newSession,
+                push: true
+            });
+        }
     }
-  }
 }
 
 /**
@@ -410,22 +412,22 @@ function checkSessionAndUpdate(context) {
  * @param {String} level
  */
 async function logIt(context, content, level) {
-  try {
-    if (settings.FILE_LOGGING) {
-      if (process.type === 'browser') {
-        checkSessionAndUpdate(context);
-      }
-      if (!fs.existsSync(LOGSDIR)) {
-        fs.mkdirpSync(LOGSDIR);
-      }
-      if (!fs.existsSync(path.join(LOGSDIR, settings.SESSION.folder))) {
-        fs.mkdirpSync(path.join(LOGSDIR, settings.SESSION.folder));
-      }
-      context.logAPI[level](getMessage(content));
+    try {
+        if (settings.FILE_LOGGING) {
+            if (process.type === 'browser') {
+                checkSessionAndUpdate(context);
+            }
+            if (!fs.existsSync(LOGSDIR)) {
+                fs.mkdirpSync(LOGSDIR);
+            }
+            if (!fs.existsSync(path.join(LOGSDIR, settings.SESSION.folder))) {
+                fs.mkdirpSync(path.join(LOGSDIR, settings.SESSION.folder));
+            }
+            context.logAPI[level](getMessage(content));
+        }
+    } catch (e) {
+        console.error(e);
     }
-  } catch (e) {
-    console.error(e);
-  }
 }
 
 /**
@@ -434,131 +436,131 @@ async function logIt(context, content, level) {
  * @returns {String} reduced url
  */
 function parseDomain(url) {
-  let domain = url.match(/\/\/(.+?)\//)
-    ? url.match(/\/\/(.+?)\//).pop()
-    : url.match(/\/\/(.+)/)
-      ? url.match(/\/\/(.+)/).pop()
-      : url;
-  return domain;
+    let domain = url.match(/\/\/(.+?)\//)
+        ? url.match(/\/\/(.+?)\//).pop()
+        : url.match(/\/\/(.+)/)
+            ? url.match(/\/\/(.+)/).pop()
+            : url;
+    return domain;
 }
 
 class Logger {
-  constructor(
-    {
-      fileName = getUniqueId(),
-      isWebview = false,
-      type = process.type
-    } = getDefaultOptions()
-  ) {
-    // A patch to fix the logger in the test mode
-    if (!settings){
-      console.logAPI = {
-        on: function(){}
-      }
-      return console;
+    constructor(
+        {
+            fileName = getUniqueId(),
+            isWebview = false,
+            type = process.type
+        } = getDefaultOptions()
+    ) {
+        // A patch to fix the logger in the test mode
+        if (!settings) {
+            console.logAPI = {
+                on: function () { }
+            }
+            return console;
+        }
+        if (fileName) {
+            fileName = parseDomain(fileName);
+        }
+        if (!isWebview && instanceList.has(fileName)) {
+            return instanceList.get(fileName);
+        }
+        pruneOldLogs();
+        let transports = [
+            new winston.transports.File(getConfig(type, isWebview, fileName, settings.SESSION.folder)),
+            new winston.transports.Console()
+        ];
+        if (isWebview) {
+            transports.pop();
+        }
+        this.logAPI = winston.createLogger({
+            level: 'debug',
+            exitOnError: false,
+            levels: CUSTOMLEVELS.levels,
+            format: winston.format.combine(
+                winston.format.prettyPrint(),
+                logFormat
+            ),
+            transports
+        });
+        this.isWebview = isWebview;
+        this.fileName = fileName;
+        this.type = type;
+        instanceList.set(fileName, this);
     }
-    if (fileName) {
-      fileName = parseDomain(fileName);
+    debug(...content) {
+        logIt(this, content, 'debug');
     }
-    if (!isWebview && instanceList.has(fileName)) {
-      return instanceList.get(fileName);
+    log(...content) {
+        logIt(this, content, 'info');
     }
-    pruneOldLogs();
-    let transports = [
-      new winston.transports.File(getConfig(type, isWebview, fileName, settings.SESSION.folder)),
-      new winston.transports.Console()
-    ];
-    if (isWebview) {
-      transports.pop();
+    info(...content) {
+        logIt(this, content, 'info');
     }
-    this.logAPI = winston.createLogger({
-      level: 'debug',
-      exitOnError: false,
-      levels: CUSTOMLEVELS.levels,
-      format: winston.format.combine(
-        winston.format.prettyPrint(),
-        logFormat
-      ),
-      transports
-    });
-    this.isWebview = isWebview;
-    this.fileName = fileName;
-    this.type = type;
-    instanceList.set(fileName, this);
-  }
-  debug(...content) {
-    logIt(this, content, 'debug');
-  }
-  log(...content) {
-    logIt(this, content, 'info');
-  }
-  info(...content) {
-    logIt(this, content, 'info');
-  }
-  warn(...content) {
-    logIt(this, content, 'warn');
-  }
-  error(...content) {
-    logIt(this, content, 'error');
-  }
-  pruneOldLogs() {
-    return pruneOldLogs();
-  }
-  getLogArchive() {
-    return getRecentLogs();
-  }
-  clearLogArchive(path) {
-    return fs.remove(path);
-  }
-  openLogsDirectory() {
-    shell.openItem(LOGSDIR);
-  }
-  getLogsDirectory() {
-    return LOGSDIR;
-  }
-  enableLogging() {
-    settings.FILE_LOGGING = true;
-    handleSetting({
-      name: 'FILE_LOGGING',
-      value: true,
-      push: true
-    });
-    return 'Logging Enabled';
-  }
-  disableLogging() {
-    settings.FILE_LOGGING = false;
-    handleSetting({
-      name: 'FILE_LOGGING',
-      value: false,
-      push: true
-    });
-    return 'Logging Disabled';
-  }
-  setLogExpiry(logExpiry) {
-    logExpiry = parseInt(logExpiry);
-    if (logExpiry > 0 && logExpiry <= 30) {
-      settings.LOGS_EXPIRY = logExpiry;
-      handleSetting({
-        name: 'LOGS_EXPIRY',
-        value: logExpiry,
-        push: true
-      });
-      return `Logs Expiry set to ${logExpiry}`;
+    warn(...content) {
+        logIt(this, content, 'warn');
     }
-  }
-  onNewSession(cb) {
-    if (typeof cb === "function") {
-        loggerEvents.on('newLoggerSession', cb);
-    } else {
-        throw new Error('Expected callback to be of type function');
+    error(...content) {
+        logIt(this, content, 'error');
     }
-  }
-  createArchive(folderPath, zipName) {
-    if(typeof folderPath === 'string' && typeof folderPath === 'string') {
-        return createArchive(folderPath, zipName);
-    } else {
-        throw new Error('Expected parameters to be of type string');
+    pruneOldLogs() {
+        return pruneOldLogs();
     }
-  }
+    getLogArchive() {
+        return getRecentLogs();
+    }
+    clearLogArchive(path) {
+        return fs.remove(path);
+    }
+    openLogsDirectory() {
+        shell.openItem(LOGSDIR);
+    }
+    getLogsDirectory() {
+        return LOGSDIR;
+    }
+    enableLogging() {
+        settings.FILE_LOGGING = true;
+        handleSetting({
+            name: 'FILE_LOGGING',
+            value: true,
+            push: true
+        });
+        return 'Logging Enabled';
+    }
+    disableLogging() {
+        settings.FILE_LOGGING = false;
+        handleSetting({
+            name: 'FILE_LOGGING',
+            value: false,
+            push: true
+        });
+        return 'Logging Disabled';
+    }
+    setLogExpiry(logExpiry) {
+        logExpiry = parseInt(logExpiry);
+        if (logExpiry > 0 && logExpiry <= 30) {
+            settings.LOGS_EXPIRY = logExpiry;
+            handleSetting({
+                name: 'LOGS_EXPIRY',
+                value: logExpiry,
+                push: true
+            });
+            return `Logs Expiry set to ${logExpiry}`;
+        }
+    }
+    onNewSession(cb) {
+        if (typeof cb === "function") {
+            loggerEvents.on('newLoggerSession', cb);
+        } else {
+            throw new Error('Expected callback to be of type function');
+        }
+    }
+    createArchive(folderPath, zipName) {
+        if (typeof folderPath === 'string' && typeof folderPath === 'string') {
+            return createArchive(folderPath, zipName);
+        } else {
+            throw new Error('Expected parameters to be of type string');
+        }
+    }
 }
 module.exports = Logger;
