@@ -177,7 +177,10 @@ const logFormat = winston.format.printf((info) => {
 function getConfig(type, isWebview, fileName, sessionFolder) {
     let filename = null;
     let config = {
-        filename: null
+        filename: null,
+        options: {
+            flags: 'a'
+        }
     };
     switch (type) {
         case 'renderer':
@@ -194,7 +197,7 @@ function getConfig(type, isWebview, fileName, sessionFolder) {
             filename = `default.log`;
     }
     if (fileName) {
-        filename = filename.replace(/^/, `${fileName}-${Date.now()}-`);
+        filename = filename.replace(/^/, `${fileName}-`);
     }
     // let sessionFolder = settings.SESSION;
     config.filename = path.join(LOGSDIR, sessionFolder, filename);
@@ -286,17 +289,21 @@ function getMessage(content) {
  */
 async function getContents(path, includeZip = false) {
     try {
-        let contents = await fs.readdir(path, {
-            withFileTypes: true
-        });
-        return contents.filter(function (file) {
-            let name = file.name;
-            if (includeZip) {
-                return !/^\./.test(name);
-            } else {
-                return !(/^\./.test(name) || /.zip$/.test(name));
-            }
-        });
+        if (await exists(path)) {
+            let contents = await fs.readdir(path, {
+                withFileTypes: true
+            });
+            return contents.filter(function (file) {
+                let name = file.name;
+                if (includeZip) {
+                    return !/^\./.test(name);
+                } else {
+                    return !(/^\./.test(name) || /.zip$/.test(name));
+                }
+            });
+        } else {
+            return [];
+        }
     } catch (e) {
         console.error(e);
     }
@@ -417,11 +424,8 @@ async function logIt(context, content, level) {
             if (process.type === 'browser') {
                 checkSessionAndUpdate(context);
             }
-            if (!fs.existsSync(LOGSDIR)) {
-                fs.mkdirpSync(LOGSDIR);
-            }
-            if (!fs.existsSync(path.join(LOGSDIR, settings.SESSION.folder))) {
-                fs.mkdirpSync(path.join(LOGSDIR, settings.SESSION.folder));
+            if (!(await fs.exists(path.join(LOGSDIR, settings.SESSION.folder)))) {
+                await fs.mkdirp(path.join(LOGSDIR, settings.SESSION.folder));
             }
             context.logAPI[level](getMessage(content));
         }
