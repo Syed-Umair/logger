@@ -289,7 +289,7 @@ function getMessage(content) {
  */
 async function getContents(path, includeZip = false) {
     try {
-        if (await exists(path)) {
+        if (await fs.exists(path)) {
             let contents = await fs.readdir(path, {
                 withFileTypes: true
             });
