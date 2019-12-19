@@ -123,7 +123,7 @@ function rendererSettingsHandler() {
             setting.hasOwnProperty('name') &&
             SETTING_LIST.indexOf(setting.name) !== -1
         ) {
-            if (setting.name === 'SESSION') {
+            if (setting.name === 'SESSION' && setting.value.folder !== settings['SESSION'].folder) {
                 loggerEvents.emit('newLoggerSession', setting.value.folder, settings['SESSION'].folder);
                 instanceList.forEach((context) => {
                     updateSession(context, setting.value);
@@ -421,9 +421,9 @@ function checkSessionAndUpdate(context) {
 async function logIt(context, content, level) {
     try {
         if (settings.FILE_LOGGING) {
-            if (process.type === 'browser') {
-                checkSessionAndUpdate(context);
-            }
+            // if (process.type === 'browser') {
+            checkSessionAndUpdate(context);
+            // }
             if (!(await fs.exists(path.join(LOGSDIR, settings.SESSION.folder)))) {
                 await fs.mkdirp(path.join(LOGSDIR, settings.SESSION.folder));
             }
