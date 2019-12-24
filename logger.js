@@ -398,9 +398,9 @@ function checkSessionAndUpdate(context) {
     if (typeof settings.SESSION === 'object' && settings.SESSION.time && settings.SESSION.folder) {
         let sessionDate = new Date(settings.SESSION.time);
         let now = new Date();
-        let hourDifference = now.getHours() - sessionDate.getHours();
-        let dayDifference = now.getDate() - sessionDate.getDate();
-        let monthDifference = now.getMonth() - sessionDate.getMonth();
+        let hourDifference = now.getUTCHours() - sessionDate.getUTCHours();
+        let dayDifference = now.getUTCDate() - sessionDate.getUTCDate();
+        let monthDifference = now.getUTCMonth() - sessionDate.getUTCMonth();
         if (hourDifference >= 1 || dayDifference >= 1 || monthDifference >= 1) {
             let newSession = createNewSession();
             handleSetting({
