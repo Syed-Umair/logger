@@ -254,6 +254,9 @@ function createNewSession() {
         hour12: false
     })}-00`;
     let session = path.join(datePart, hourPart);
+    if (!fs.existsSync(path.join(LOGSDIR, session))) {
+        fs.mkdirpSync(path.join(LOGSDIR, session));
+    }
     return {
         folder: session,
         time: date.getTime()
