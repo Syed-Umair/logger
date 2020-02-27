@@ -74,9 +74,7 @@ function getDefaultOptions() {
         type: process.type
     };
     //calculate name based on main-file-location
-    options.fileName = process.mainModule
-        ? path.basename(process.mainModule.filename)
-        : getUniqueId();
+    options.fileName = (options.type === 'browser') ? options.fileName : (path.basename(location.href) || getUniqueId())
     return options;
 }
 
