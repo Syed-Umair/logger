@@ -72,6 +72,7 @@ logger = new logger({
 logger.setLogExpiry(10);
 // Deletes logs older than 10 days
 // Maximum value is 60 days
+// Default: 7 days
 ```
 
 ##### disableLogging():
