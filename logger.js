@@ -58,8 +58,8 @@ function getSettings() {
     if (process.type === 'browser') {
         return Object.assign({}, global.loggerSettings);;
     } else {
-        let { remote } = require('electron');
-        return Object.assign({}, remote.getGlobal('loggerSettings'));
+        let { getGlobal } = require('@electron/remote');
+        return Object.assign({}, getGlobal('loggerSettings'));
     }
 }
 
@@ -518,7 +518,7 @@ class Logger {
         return fs.remove(path);
     }
     openLogsDirectory() {
-        shell.openItem(LOGSDIR);
+        shell.opePath(LOGSDIR);
     }
     getLogsDirectory() {
         return LOGSDIR;
